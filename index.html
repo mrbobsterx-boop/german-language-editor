@@ -40,6 +40,11 @@ button,input{font:inherit}button{cursor:pointer}
 .annotation{display:inline;background:rgba(143,179,207,.13);border-bottom:1px solid #6f96b4;border-radius:2px;padding:1px 2px}
 .active-word{background:rgba(73,120,160,.42);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.35)}
 .hover-word{background:rgba(73,120,160,.20);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.20)}
+.missing-word{border-bottom:2px dotted #d98b8b;cursor:pointer}
+.missing-word:hover{background:rgba(217,139,139,.10)}
+.dictionary-item{position:relative}
+.dictionary-delete{flex:0 0 auto;border:1px solid #4b4b4b;background:#2b2b2b;color:#aaa;border-radius:5px;padding:5px 8px;font-size:11px}
+.dictionary-delete:hover{background:#3a3a3a;color:#ddd}
 .annotation-note{color:#9eb9cc;font-size:.78em;margin-left:3px;opacity:.95}
 .selection-popup{position:fixed;z-index:1000;width:330px;background:var(--popup);border:1px solid #555;border-radius:8px;box-shadow:0 15px 45px rgba(0,0,0,.45);padding:14px;display:none}
 .selection-popup.visible{display:block}
@@ -60,7 +65,7 @@ button,input{font:inherit}button{cursor:pointer}
 }
 </style>
 </head>
-<body>
+<body data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false">
 <div class="app">
 <header class="topbar">
   <div class="brand">German Language Editor</div>
@@ -82,13 +87,13 @@ button,input{font:inherit}button{cursor:pointer}
   <small id="editorStats">Оригинал · 0 слов · найдено: 0 · не найдено: 0</small>
 </div>
   <div class="editor-wrap">
-    <div id="editor" class="editor" contenteditable="true" spellcheck="false"
+    <div id="editor" class="editor" contenteditable="true" spellcheck="false" data-gramm="false" data-gramm_editor="false" data-enable-grammarly="false" autocorrect="off" autocapitalize="off"
          data-placeholder="Вставь сюда немецкий текст..."></div>
   </div>
 </section>
 
 <section class="column translation-column" id="translationColumn">
-  <div class="column-header"><span>Слова</span><small>Для обучения</small></div>
+  <div class="column-header"><span>Слова</span><small>Память для обучения</small></div>
   <div id="dictionaryStatus" class="dictionary-status">Загрузка словаря...</div>
   <div id="dictionaryList" class="dictionary-list">
     <div class="dictionary-empty">Сохранённые слова появятся здесь.</div>
@@ -161,10 +166,97 @@ const workspace = document.getElementById("workspace");
 const fileInput = document.getElementById("fileInput");
 
 let localDictionary = new Map();
+let learningDictionary = new Map();
 let savedWords = [];
+const LEARNING_MEMORY_KEY = "german-language-learning-memory-v1";
 let currentSelection = null;
 let selectionJustFinished = false;
 let pinnedPopup = false;
+
+/* ---------- learning memory ---------- */
+
+function loadLearningMemory(){
+  try{
+    const raw = localStorage.getItem(LEARNING_MEMORY_KEY);
+    const data = raw ? JSON.parse(raw) : [];
+    savedWords = Array.isArray(data) ? data.filter(Boolean) : [];
+  }catch(error){
+    console.error(error);
+    savedWords = [];
+  }
+  renderDictionary();
+}
+
+function saveLearningMemory(){
+  try{
+    localStorage.setItem(LEARNING_MEMORY_KEY, JSON.stringify(savedWords));
+  }catch(error){
+    console.error(error);
+    statusEl.textContent = "Не удалось сохранить память слов";
+  }
+}
+
+function addToLearningMemory(item){
+  const key = normalizeWord(item.word);
+  const index = savedWords.findIndex(x => normalizeWord(x.word) === key);
+  if(index >= 0){
+    savedWords[index] = {...savedWords[index], ...item};
+  }else{
+    savedWords.push(item);
+  }
+  saveLearningMemory();
+  renderDictionary();
+}
+
+function removeFromLearningMemory(index){
+  if(index < 0 || index >= savedWords.length) return;
+  const removed = savedWords[index];
+  savedWords.splice(index, 1);
+
+  // Remove only the personal learning entry. The original FreeDict entry,
+  // if it exists, remains available.
+  const key = normalizeWord(removed.word);
+  learningDictionary.delete(key);
+
+  saveLearningMemory();
+  renderDictionary();
+  updateWordCount();
+  refreshMissingWordMarks();
+  statusEl.textContent = "Слово удалено из памяти";
+}
+
+function mergeDocumentWords(words){
+  if(!Array.isArray(words)) return;
+  let changed = false;
+  for(const item of words){
+    if(!item || !item.word || !item.translation) continue;
+    const key = normalizeWord(item.word);
+    const existing = savedWords.find(x => normalizeWord(x.word) === key);
+    if(existing){
+      if(item.translation && existing.translation !== item.translation){
+        Object.assign(existing, item);
+        changed = true;
+      }
+    }else{
+      savedWords.push(item);
+      changed = true;
+    }
+  }
+  if(changed) saveLearningMemory();
+}
+
+function injectLearningWordsIntoDictionary(){
+  learningDictionary.clear();
+  for(const item of savedWords){
+    if(!item || !item.word || !item.translation) continue;
+    const key = normalizeWord(item.word);
+    learningDictionary.set(key, {
+      word: item.base || item.word,
+      translation: item.translation,
+      grammar: item.grammar || ""
+    });
+  }
+}
 
 /* ---------- dictionary ---------- */
 
@@ -430,7 +522,8 @@ function morphologyCandidates(word){
 }
 
 function lookupDirect(word){
-  return localDictionary.get(normalizeWord(word));
+  const key = normalizeWord(word);
+  return learningDictionary.get(key) || localDictionary.get(key);
 }
 
 function buildWordInfo(selectedText, entry){
@@ -795,60 +888,52 @@ function renderDictionary(){
   dictionaryList.innerHTML = savedWords.map((item, index) => `
     <div class="dictionary-item" data-index="${index}">
       <div>
-        <div class="dictionary-word">
-          ${escapeHtml(item.word)}
-        </div>
-        <div class="dictionary-form">
-          ${escapeHtml(item.base || "")}
-        </div>
+        <div class="dictionary-word">${escapeHtml(item.word)}</div>
+        <div class="dictionary-form">${escapeHtml(item.base || "")}</div>
       </div>
-      <div class="dictionary-translation">
-        ${escapeHtml(item.translation || "")}
-      </div>
+      <div class="dictionary-translation">${escapeHtml(item.translation || "")}</div>
+      <button class="dictionary-delete" type="button" data-delete-index="${index}">Удалить</button>
     </div>
   `).join("");
+
+  dictionaryList.querySelectorAll("[data-delete-index]").forEach(button => {
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      removeFromLearningMemory(Number(button.dataset.deleteIndex));
+    });
+  });
 }
 
 function saveWordToDictionary(){
   if(!currentSelection) return;
-  // The clicked word remains highlighted while the popup is open.
 
   const selectedText = currentSelection.text;
   const info = lookupWord(selectedText);
+  const manual = document.getElementById("annotationInput").value.trim();
 
-  const manual =
-    document.getElementById("annotationInput").value.trim();
-
-  const translation =
-    manual ||
-    (
-      info.translation.startsWith("Нет точного")
-        ? ""
-        : info.translation
-    );
+  const translation = manual || (
+    info.translation !== "Не найдено в словаре" ? info.translation : ""
+  );
 
   if(!translation){
-    statusEl.textContent = "Нет перевода для сохранения";
+    statusEl.textContent = "Введите перевод для сохранения";
     return;
   }
 
-  const exists = savedWords.some(
-    item =>
-      normalizeWord(item.word) === normalizeWord(selectedText)
-  );
+  const item = {
+    word: selectedText,
+    base: info.base === "—" ? selectedText : info.base,
+    article: info.article,
+    grammar: info.grammar || "",
+    translation
+  };
 
-  if(!exists){
-    savedWords.push({
-      word:selectedText,
-      base:info.base === "—" ? selectedText : info.base,
-      article:info.article,
-      translation
-    });
+  addToLearningMemory(item);
+  injectLearningWordsIntoDictionary();
+  refreshMissingWordMarks();
+  updateWordCount();
 
-    renderDictionary();
-  }
-
-  statusEl.textContent = "Слово сохранено";
+  statusEl.textContent = "Слово сохранено в память";
 }
 
 document
@@ -973,14 +1058,18 @@ fileInput.addEventListener("change", async () => {
       data.html ||
       "";
 
-    savedWords =
+    const documentWords =
       Array.isArray(data.savedWords)
         ? data.savedWords
         : Array.isArray(data.words)
           ? data.words
           : [];
 
+    mergeDocumentWords(documentWords);
+    injectLearningWordsIntoDictionary();
     renderDictionary();
+    updateWordCount();
+    refreshMissingWordMarks();
     updateWordCount();
 
     statusEl.textContent = "Документ открыт";
@@ -995,7 +1084,6 @@ fileInput.addEventListener("change", async () => {
 document.getElementById("newBtn").addEventListener("click", () => {
   clearActiveWord();
   editor.innerHTML = "";
-  savedWords = [];
   currentSelection = null;
 
   popup.classList.remove("visible");
@@ -1031,39 +1119,119 @@ function getTextWords(){
   return text.match(/[\p{L}\p{N}ÄÖÜäöüßẞ]+(?:[-'][\p{L}\p{N}ÄÖÜäöüßẞ]+)*/gu) || [];
 }
 
+function isFoundWord(word){
+  const info = lookupWord(word);
+  return info.base !== "—" && info.translation !== "Не найдено в словаре";
+}
+
+function pointInsideRects(rects, x, y){
+  for(const r of rects){
+    if(x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true;
+  }
+  return false;
+}
+
+function getEditorTextNodes(){
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      const parent = node.parentElement;
+      if(!parent) return NodeFilter.FILTER_REJECT;
+      if(parent.closest(".annotation-note, .dictionary-ui")) return NodeFilter.FILTER_REJECT;
+      return node.nodeValue ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const nodes=[];
+  let node;
+  while((node=walker.nextNode())) nodes.push(node);
+  return nodes;
+}
+
+function unwrapMissingWords(){
+  editor.querySelectorAll("span.missing-word").forEach(span => {
+    const parent = span.parentNode;
+    if(!parent) return;
+    while(span.firstChild) parent.insertBefore(span.firstChild, span);
+    parent.removeChild(span);
+  });
+  editor.normalize();
+}
+
+function refreshMissingWordMarks(){
+  if(!editor.innerText.trim()) return;
+  unwrapMissingWords();
+
+  const nodes = getEditorTextNodes();
+  for(const node of nodes){
+    const text = node.nodeValue;
+    const regex = /[\p{L}\p{N}ÄÖÜäöüßẞ]+(?:[-'][\p{L}\p{N}ÄÖÜäöüßẞ]+)*/gu;
+    const matches = [...text.matchAll(regex)];
+    if(!matches.length) continue;
+
+    const frag = document.createDocumentFragment();
+    let cursor = 0;
+    let changed = false;
+
+    for(const match of matches){
+      const word = match[0];
+      const start = match.index;
+      if(start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, start)));
+
+      if(isFoundWord(word)){
+        frag.appendChild(document.createTextNode(word));
+      }else{
+        const mark = document.createElement("span");
+        mark.className = "missing-word";
+        mark.textContent = word;
+        frag.appendChild(mark);
+        changed = true;
+      }
+      cursor = start + word.length;
+    }
+
+    if(cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+
+    if(changed){
+      node.parentNode.replaceChild(frag, node);
+    }
+  }
+}
+
 function updateWordCount(){
   const words = getTextWords();
   const total = words.length;
   let found = 0;
 
-  // Count each occurrence, not only unique words.
   for(const word of words){
-    const info = lookupWord(word);
-    if(info.base !== "—" && info.translation !== "Не найдено в словаре"){
-      found++;
-    }
+    if(isFoundWord(word)) found++;
   }
 
   const notFound = total - found;
 
-  wordCountEl.textContent =
-    total + " " +
-    (total === 1 ? "слово" : "слов");
-
+  wordCountEl.textContent = total + " " + (total === 1 ? "слово" : "слов");
   editorStatsEl.textContent =
     "Оригинал · " + total +
     " слов · найдено: " + found +
     " · не найдено: " + notFound;
 }
 
-editor.addEventListener("input", updateWordCount);
-editor.addEventListener("input", () => setTimeout(updateWordCount, 0));
+editor.addEventListener("input", () => {
+  setTimeout(() => {
+    updateWordCount();
+    refreshMissingWordMarks();
+    updateWordCount();
+  }, 0);
+});
 
 /* ---------- start ---------- */
 
-renderDictionary();
+loadLearningMemory();
 updateWordCount();
-loadLocalDictionary();
+loadLocalDictionary().then(() => {
+  injectLearningWordsIntoDictionary();
+  updateWordCount();
+  refreshMissingWordMarks();
+  updateWordCount();
+});
 </script>
 </body>
 </html>
