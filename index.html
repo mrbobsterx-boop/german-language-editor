@@ -223,15 +223,30 @@ async function loadLocalDictionary(){
       for(const entry of data) addDictionaryEntry(entry);
     }else if(data && Array.isArray(data.words)){
       for(const entry of data.words) addDictionaryEntry(entry);
-    }else if(data && typeof data === "object"){
+    }else if(data && Array.isArray(data.entries)){
       /*
-        Supports a compact object dictionary too:
+        This is the actual format of our converted FreeDict file:
         {
-          "machen": "делать",
-          "gehen": ["идти","ходить"]
+          "source": "...",
+          "version": "...",
+          "wordcount": 26809,
+          "entries": [
+            {
+              "word": "machen",
+              "translation": ["делать"],
+              "grammar": "verb"
+            }
+          ]
         }
       */
+      for(const entry of data.entries) addDictionaryEntry(entry);
+    }else if(data && typeof data === "object"){
+      /*
+        Supports a compact object dictionary too.
+      */
       for(const [word, value] of Object.entries(data)){
+        if(["source","version","wordcount","entries","words"].includes(word)) continue;
+
         if(value && typeof value === "object" && !Array.isArray(value)){
           addDictionaryEntry({word, ...value});
         }else{
@@ -279,6 +294,28 @@ function lookupWord(selectedText){
       article:"—",
       grammar:direct.grammar
     };
+  }
+
+  /*
+    Small normalization for German compounds/forms:
+    try the selected text with a trailing punctuation removed.
+  */
+  const withoutPunctuation = clean
+    .replace(/[.,!?;:…]+$/u, "")
+    .trim();
+
+  if(withoutPunctuation && withoutPunctuation !== clean){
+    const normalized = localDictionary.get(withoutPunctuation);
+
+    if(normalized){
+      return {
+        word:selectedText,
+        translation:normalized.translation,
+        base:normalized.word,
+        article:"—",
+        grammar:normalized.grammar
+      };
+    }
   }
 
   return {
