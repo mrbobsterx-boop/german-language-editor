@@ -329,25 +329,56 @@ function lookupWord(selectedText){
 
 /* ---------- popup ---------- */
 
-function getEditorSelection(){
-  const selection = window.getSelection();
+function getWordAtPoint(x, y){
+  let range = null;
 
-  if(!selection || selection.isCollapsed || !selection.rangeCount){
+  if(document.caretRangeFromPoint){
+    range = document.caretRangeFromPoint(x, y);
+  }else if(document.caretPositionFromPoint){
+    const position = document.caretPositionFromPoint(x, y);
+    if(position){
+      range = document.createRange();
+      range.setStart(position.offsetNode, position.offset);
+      range.collapse(true);
+    }
+  }
+
+  if(!range || !editor.contains(range.startContainer)) return null;
+
+  let node = range.startContainer;
+
+  if(node.nodeType !== Node.TEXT_NODE){
     return null;
   }
 
-  const text = selection.toString().trim();
+  const text = node.textContent || "";
+  let offset = range.startOffset;
 
-  if(!text) return null;
+  if(offset === text.length && offset > 0) offset--;
 
-  const anchorInside = editor.contains(selection.anchorNode);
-  const focusInside = editor.contains(selection.focusNode);
+  // If the click is exactly on whitespace, don't open the popup.
+  if(/\s/u.test(text[offset] || "")) return null;
 
-  if(!anchorInside || !focusInside) return null;
+  let start = offset;
+  let end = offset + 1;
+
+  // Word characters: letters, numbers, German umlauts, ß, apostrophe/hyphen.
+  const isWordChar = ch => /[\p{L}\p{N}ÄÖÜäöüß'’\-]/u.test(ch);
+
+  while(start > 0 && isWordChar(text[start - 1])) start--;
+  while(end < text.length && isWordChar(text[end])) end++;
+
+  const word = text.slice(start, end).trim();
+
+  if(!word) return null;
+
+  const wordRange = document.createRange();
+  wordRange.setStart(node, start);
+  wordRange.setEnd(node, end);
 
   return {
-    text,
-    range: selection.getRangeAt(0).cloneRange()
+    text: word,
+    range: wordRange
   };
 }
 
@@ -375,23 +406,21 @@ function positionPopup(){
   popup.style.top = top + "px";
 }
 
-function showSelectionPopup(){
-  const selected = getEditorSelection();
+function showWordPopup(wordData){
+  if(!wordData) return;
 
-  if(!selected) return;
+  currentSelection = wordData;
 
-  currentSelection = selected;
+  const info = lookupWord(wordData.text);
 
-  const info = lookupWord(selected.text);
-
-  document.getElementById("popupWord").textContent = selected.text;
+  document.getElementById("popupWord").textContent = wordData.text;
 
   document.getElementById("popupForm").textContent =
     info.grammar
       ? info.grammar
       : info.base !== "—"
         ? "Словарная форма: " + info.base
-        : "Выделенный фрагмент";
+        : "Слово";
 
   document.getElementById("popupTranslation").textContent =
     info.translation;
@@ -413,26 +442,29 @@ function showSelectionPopup(){
 }
 
 /*
-  IMPORTANT:
-  Popup opens on mouseup.
-  This preserves the behavior where the popup stays open
-  after the mouse selection is finished.
+  WORD CLICK MODE
+  ---------------
+  There is no text selection anymore.
+
+  A normal left click inside the German editor finds the word
+  under the mouse and opens its popup.
 */
-editor.addEventListener("mouseup", () => {
-  setTimeout(() => {
-    showSelectionPopup();
+editor.addEventListener("click", event => {
+  // Clicking an existing annotation should still resolve to the word.
+  const wordData = getWordAtPoint(event.clientX, event.clientY);
 
-    selectionJustFinished = true;
+  if(!wordData){
+    popup.classList.remove("visible");
+    currentSelection = null;
+    return;
+  }
 
-    setTimeout(() => {
-      selectionJustFinished = false;
-    }, 150);
-  }, 0);
+  showWordPopup(wordData);
 });
 
 document.addEventListener("click", event => {
   if(popup.contains(event.target)) return;
-  if(selectionJustFinished) return;
+  if(editor.contains(event.target)) return;
 
   popup.classList.remove("visible");
   currentSelection = null;
