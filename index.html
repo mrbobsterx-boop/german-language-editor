@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>German Language Editor — Prototype</title>
+<style>
+    :root {
+        --bg: #242424;
+        --panel: #292929;
+        --panel-2: #303030;
+        --line: #474747;
+        --text: #d7d7d7;
+        --muted: #9d9d9d;
+        --heading: #b9c9d8;
+        --accent: #8fb3cf;
+        --accent-2: #6f96b4;
+        --popup: #202020;
+        --green: #8db69b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button, input, textarea {
+        font: inherit;
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    .app {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* TOP BAR */
+    .topbar {
+        height: 64px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #222;
+    }
+
+    .brand {
+        font-size: 19px;
+        font-weight: 700;
+        color: var(--heading);
+        letter-spacing: .1px;
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .btn {
+        border: 1px solid #505050;
+        background: #303030;
+        color: #d5d5d5;
+        border-radius: 6px;
+        padding: 8px 12px;
+        transition: .15s;
+    }
+
+    .btn:hover {
+        background: #3a3a3a;
+        border-color: #666;
+    }
+
+    .btn.primary {
+        background: #3c566b;
+        border-color: #55748d;
+        color: #eef6fb;
+    }
+
+    .btn.primary:hover {
+        background: #49667d;
+    }
+
+    .toggle {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-left: 8px;
+        color: #bbb;
+        font-size: 13px;
+        user-select: none;
+    }
+
+    /* WORKSPACE */
+    .workspace {
+        flex: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        min-height: 0;
+    }
+
+    .column {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .column + .column {
+        border-left: 1px solid var(--line);
+    }
+
+    .column-header {
+        height: 48px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        color: var(--heading);
+        font-weight: 700;
+        background: #272727;
+    }
+
+    .column-header small {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 12px;
+    }
+
+    .editor-wrap {
+        position: relative;
+        flex: 1;
+        overflow: auto;
+    }
+
+    .editor {
+        width: 100%;
+        min-height: 100%;
+        padding: 28px 32px 120px;
+        outline: none;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 17px;
+        line-height: 1.72;
+        color: #d9d9d9;
+    }
+
+    .editor:empty:before {
+        content: attr(data-placeholder);
+        color: #777;
+    }
+
+    .translation {
+        color: #c3c3c3;
+        padding: 28px 32px 120px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 17px;
+        line-height: 1.72;
+        min-height: 100%;
+    }
+
+    .translation.hidden {
+        display: none;
+    }
+
+    .translation-column.expanded {
+        display: none;
+    }
+
+    .workspace.single {
+        grid-template-columns: 1fr;
+    }
+
+    /* annotation */
+    .annotation {
+        display: inline;
+        background: rgba(143,179,207,.13);
+        border-bottom: 1px solid #6f96b4;
+        border-radius: 2px;
+        padding: 1px 2px;
+    }
+
+    .annotation-note {
+        color: #9eb9cc;
+        font-size: .78em;
+        margin-left: 3px;
+        opacity: .95;
+    }
+
+    /* selection popup */
+    .selection-popup {
+        position: fixed;
+        z-index: 1000;
+        width: 330px;
+        background: var(--popup);
+        border: 1px solid #555;
+        border-radius: 8px;
+        box-shadow: 0 15px 45px rgba(0,0,0,.45);
+        padding: 14px;
+        display: none;
+    }
+
+    .selection-popup.visible {
+        display: block;
+    }
+
+    .popup-word {
+        font-size: 19px;
+        font-weight: 700;
+        color: #e1e8ed;
+        margin-bottom: 3px;
+    }
+
+    .popup-form {
+        color: #91adc1;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    .popup-row {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 8px;
+        margin: 5px 0;
+        font-size: 14px;
+    }
+
+    .popup-label {
+        color: #858585;
+    }
+
+    .popup-value {
+        color: #ddd;
+    }
+
+    .popup-actions {
+        display: flex;
+        gap: 7px;
+        margin-top: 13px;
+    }
+
+    .popup-actions .btn {
+        flex: 1;
+        font-size: 12px;
+        padding: 7px 8px;
+    }
+
+    .popup-input {
+        width: 100%;
+        margin-top: 10px;
+        background: #2c2c2c;
+        color: #ddd;
+        border: 1px solid #4c4c4c;
+        border-radius: 5px;
+        padding: 8px 9px;
+        outline: none;
+    }
+
+    .popup-input:focus {
+        border-color: var(--accent-2);
+    }
+
+    /* bottom status */
+    .statusbar {
+        height: 34px;
+        border-top: 1px solid var(--line);
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: #858585;
+        font-size: 12px;
+        background: #222;
+    }
+
+    .statusbar .saved {
+        color: var(--green);
+    }
+
+    /* hidden file input */
+    #fileInput { display: none; }
+
+    @media (max-width: 800px) {
+        .workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .translation-column {
+            display: none;
+        }
+
+        .topbar {
+            padding: 0 12px;
+        }
+
+        .toolbar .btn:nth-child(1),
+        .toolbar .btn:nth-child(2) {
+            display: none;
+        }
+
+        .editor {
+            padding: 22px 18px 100px;
+        }
+    }
+
+    .translation-settings {
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      padding:10px 14px; border-top:1px solid #242832; border-bottom:1px solid #242832;
+      background:#111318; font-size:12px; color:#aeb5c2;
+    }
+    .translation-settings input {
+      background:#0d0f13; color:#e9edf3; border:1px solid #303642;
+      border-radius:7px; padding:7px 9px; outline:none;
+    }
+    .translation-settings input.url { min-width:300px; }
+    .translation-settings input.key { min-width:180px; }
+    .translation-settings button {
+      background:#242a35; color:#e9edf3; border:1px solid #363d49;
+      border-radius:7px; padding:7px 11px; cursor:pointer;
+    }
+    .translation-status { margin-left:auto; }
+
+
+    .dictionary-list {
+        padding: 18px 22px 90px;
+        overflow: auto;
+        min-height: 100%;
+    }
+
+    .dictionary-empty {
+        color: #777;
+        font-size: 14px;
+        line-height: 1.6;
+        padding: 12px 2px;
+    }
+
+    .dictionary-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 13px 2px;
+        border-bottom: 1px solid #2b2b2b;
+    }
+
+    .dictionary-word {
+        color: #e6e6e6;
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.35;
+    }
+
+    .dictionary-form {
+        color: #808080;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .dictionary-translation {
+        color: #c9c9c9;
+        font-size: 15px;
+        line-height: 1.4;
+        text-align: right;
+        max-width: 52%;
+    }
+
+</style>
+</head>
+
+<body>
+<div class="app">
+
+    <header class="topbar">
+        <div class="brand">German Language Editor</div>
+
+        <div class="toolbar">
+            <button class="btn" id="newBtn">Новый</button>
+            <button class="btn" id="openBtn">Открыть</button>
+            <button class="btn primary" id="saveBtn">Сохранить</button>
+
+            <label class="toggle">
+                <input type="checkbox" id="translationToggle" checked>
+                Слова для обучения
+            </label>
+        </div>
+    </header>
+
+    
+
+
+<main class="workspace" id="workspace">
+
+        <section class="column">
+            <div class="column-header">
+                <span>Deutsch</span>
+                <small>Оригинал</small>
+            </div>
+
+            <div class="editor-wrap">
+                <div
+                    id="editor"
+                    class="editor"
+                    contenteditable="true"
+                    spellcheck="false"
+                    data-placeholder="Вставь сюда немецкий текст..."
+                ></div>
+            </div>
+        </section>
+
+        <section class="column translation-column" id="translationColumn">
+            <div class="column-header">
+                <span>Слова</span>
+                <small>Для обучения</small>
+            </div>
+
+            <div id="dictionaryList" class="dictionary-list">
+                <div class="dictionary-empty">
+                    Сохранённые слова появятся здесь.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="statusbar">
+        <span id="status">Готово</span>
+        <span id="wordCount">0 слов</span>
+    </footer>
+</div>
+
+<input type="file" id="fileInput" accept=".json,.txt">
+
+<!-- Permanent selection window -->
+<div class="selection-popup" id="popup">
+    <div class="popup-word" id="popupWord">Wort</div>
+    <div class="popup-form" id="popupForm">die Wortform</div>
+
+    <div class="popup-row">
+        <div class="popup-label">Перевод</div>
+        <div class="popup-value" id="popupTranslation">—</div>
+    </div>
+
+    <div class="popup-row">
+        <div class="popup-label">Базовая форма</div>
+        <div class="popup-value" id="popupBase">—</div>
+    </div>
+
+    <div class="popup-row">
+        <div class="popup-label">Артикль</div>
+        <div class="popup-value" id="popupArticle">—</div>
+    </div>
+
+    <input
+        id="annotationInput"
+        class="popup-input"
+        placeholder="Перевод для пометки в тексте..."
+    >
+
+    <div class="popup-actions">
+        <button class="btn" id="annotateBtn">Добавить в текст</button>
+        <button class="btn primary" id="dictionaryBtn">Сохранить в словарь</button>
+    </div>
+</div>
+
+<script>
+/*
+    PROTOTYPE
+    =========
+    Здесь пока нет внешнего переводчика/API.
+    Для демонстрации используется небольшой локальный словарь.
+    Позже сюда можно подключить полноценный переводчик и AI-разбор.
+*/
+
+const DEMO_DICTIONARY = {
+    "vorbereitung": {
+        article: "die",
+        base: "Vorbereitung",
+        translation: "подготовка"
+    },
+    "teilnahmequote": {
+        article: "die",
+        base: "Teilnahmequote",
+        translation: "уровень участия"
+    },
+    "öffnungsraten": {
+        article: "die",
+        base: "Öffnungsrate",
+        translation: "показатели открытия"
+    },
+    "öffnungsrate": {
+        article: "die",
+        base: "Öffnungsrate",
+        translation: "показатель открытия"
+    },
+    "klicks": {
+        article: "der",
+        base: "Klick",
+        translation: "клик"
+    },
+    "marktdurchschnitt": {
+        article: "der",
+        base: "Marktdurchschnitt",
+        translation: "средний показатель рынка"
+    },
+    "funktioniert": {
+        article: "",
+        base: "funktionieren",
+        translation: "работать / функционировать"
+    },
+    "funktioniert.": {
+        article: "",
+        base: "funktionieren",
+        translation: "работать / функционировать"
+    }
+};
+
+const DEMO_TRANSLATIONS = [
+    {
+        de: "Die Vorbereitung hat gut funktioniert. Teilnahmequote, Öffnungsraten und Klicks lagen über dem Marktdurchschnitt.",
+        ru: "Подготовка прошла хорошо. Уровень участия, показатели открытия и клики были выше среднего показателя рынка."
+    }
+];
+
+const editor = document.getElementById("editor");
+const dictionaryList = document.getElementById("dictionaryList");
+const popup = document.getElementById("popup");
+const workspace = document.getElementById("workspace");
+const translationColumn = document.getElementById("translationColumn");
+const translationToggle = document.getElementById("translationToggle");
+const statusEl = document.getElementById("status");
+const wordCountEl = document.getElementById("wordCount");
+const fileInput = document.getElementById("fileInput");
+
+let currentSelection = null;
+let annotations = [];
+let dictionary = [];
+let currentFileName = "german-learning-text.json";
+
+function setStatus(text, saved = false) {
+    statusEl.textContent = text;
+    statusEl.className = saved ? "saved" : "";
+}
+
+function cleanWord(word) {
+    return word
+        .replace(/[.,!?;:"„“‚‘()«»]/g, "")
+        .trim();
+}
+
+function lookupWord(word) {
+    const key = cleanWord(word).toLowerCase();
+    return DEMO_DICTIONARY[key] || {
+        article: "—",
+        base: word,
+        translation: "Перевод будет получен после подключения переводчика"
+    };
+}
+
+function getPlainText() {
+    return editor.innerText.replace(/\u00a0/g, " ").trim();
+}
+
+function countWords(text) {
+    if (!text.trim()) return 0;
+    return text.trim().split(/\s+/).length;
+}
+
+function updateWordCount() {
+    wordCountEl.textContent = countWords(getPlainText()) + " слов";
+}
+
+function renderDictionary() {
+    if (!dictionaryList) return;
+
+    if (!dictionary.length) {
+        dictionaryList.innerHTML =
+            '<div class="dictionary-empty">Сохранённые слова появятся здесь.</div>';
+        return;
+    }
+
+    dictionaryList.innerHTML = "";
+
+    dictionary.forEach((entry) => {
+        const item = document.createElement("div");
+        item.className = "dictionary-item";
+
+        const left = document.createElement("div");
+
+        const word = document.createElement("div");
+        word.className = "dictionary-word";
+        word.textContent = entry.german || entry.base_form || "";
+
+        const form = document.createElement("div");
+        form.className = "dictionary-form";
+        form.textContent =
+            (entry.article ? entry.article + " " : "") +
+            (entry.base_form || "");
+
+        left.appendChild(word);
+        left.appendChild(form);
+
+        const right = document.createElement("div");
+        right.className = "dictionary-translation";
+        right.textContent = entry.translation || "—";
+
+        item.appendChild(left);
+        item.appendChild(right);
+        dictionaryList.appendChild(item);
+    });
+}
+
+function positionPopup(rect) {
+    const popupWidth = 330;
+    const popupHeight = popup.offsetHeight || 250;
+
+    let left = rect.left + (rect.width / 2) - popupWidth / 2;
+    let top = rect.top - popupHeight - 12;
+
+    if (left < 10) left = 10;
+    if (left + popupWidth > window.innerWidth - 10) {
+        left = window.innerWidth - popupWidth - 10;
+    }
+
+    if (top < 10) {
+        top = rect.bottom + 12;
+    }
+
+    if (top + popupHeight > window.innerHeight - 10) {
+        top = Math.max(10, window.innerHeight - popupHeight - 10);
+    }
+
+    popup.style.left = left + "px";
+    popup.style.top = top + "px";
+}
+
+function showSelectionPopup() {
+    const selection = window.getSelection();
+
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        return;
+    }
+
+    const text = selection.toString().trim();
+
+    if (!text) return;
+
+    currentSelection = {
+        text,
+        range: selection.getRangeAt(0).cloneRange()
+    };
+
+    const info = lookupWord(text);
+
+    document.getElementById("popupWord").textContent = text;
+    document.getElementById("popupForm").textContent =
+        info.article && info.article !== "—"
+            ? `${info.article} ${info.base}`
+            : info.base;
+
+    document.getElementById("popupTranslation").textContent = info.translation;
+    document.getElementById("popupBase").textContent = info.base;
+    document.getElementById("popupArticle").textContent =
+        info.article || "—";
+
+    document.getElementById("annotationInput").value = info.translation || "";
+
+    popup.classList.add("visible");
+    positionPopup(currentSelection.range.getBoundingClientRect());
+}
+
+document.addEventListener("selectionchange", () => {
+    /*
+      Не закрываем окно автоматически.
+      Если есть новое выделение — обновляем его.
+    */
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+
+    if (editor.contains(selection.anchorNode) &&
+        editor.contains(selection.focusNode)) {
+        showSelectionPopup();
+    }
+});
+
+document.addEventListener("click", (event) => {
+    // Клик внутри окна ничего не закрывает.
+    if (popup.contains(event.target)) return;
+
+    // Любой клик вне окна закрывает его.
+    popup.classList.remove("visible");
+    currentSelection = null;
+});
+
+editor.addEventListener("input", () => {
+    updateWordCount();
+    setStatus("Есть несохранённые изменения");
+});
+
+translationToggle.addEventListener("change", () => {
+    if (translationToggle.checked) {
+        translationColumn.classList.remove("expanded");
+        workspace.classList.remove("single");
+    } else {
+        translationColumn.classList.add("expanded");
+        workspace.classList.add("single");
+    }
+});
+
+function addAnnotation() {
+    if (!currentSelection) return;
+
+    const note = document.getElementById("annotationInput").value.trim();
+    if (!note) return;
+
+    const range = currentSelection.range;
+
+    try {
+        const span = document.createElement("span");
+        span.className = "annotation";
+        span.dataset.original = currentSelection.text;
+        span.dataset.translation = note;
+
+        const fragment = range.extractContents();
+        span.appendChild(fragment);
+
+        const noteSpan = document.createElement("span");
+        noteSpan.className = "annotation-note";
+        noteSpan.textContent = `(${note})`;
+
+        span.appendChild(noteSpan);
+        range.insertNode(span);
+
+        annotations.push({
+            original: currentSelection.text,
+            translation: note
+        });
+
+        setStatus("Пометка добавлена");
+        updateWordCount();
+    } catch (error) {
+        console.error(error);
+        setStatus("Не удалось добавить пометку");
+    }
+}
+
+function saveDictionaryWord() {
+    if (!currentSelection) return;
+
+    const info = lookupWord(currentSelection.text);
+
+    const entry = {
+        german: currentSelection.text,
+        article: info.article || "",
+        base_form: info.base,
+        translation: info.translation,
+        created_at: new Date().toISOString()
+    };
+
+    const exists = dictionary.some(
+        x => x.german.toLowerCase() === entry.german.toLowerCase()
+    );
+
+    if (!exists) {
+        dictionary.push(entry);
+        renderDictionary();
+        setStatus("Слово добавлено в обучение");
+    } else {
+        renderDictionary();
+        setStatus("Слово уже есть в словаре");
+    }
+}
+
+document.getElementById("annotateBtn").addEventListener("click", addAnnotation);
+document.getElementById("dictionaryBtn").addEventListener("click", saveDictionaryWord);
+
+document.getElementById("newBtn").addEventListener("click", () => {
+    if (!confirm("Создать новый текст? Несохранённые изменения будут потеряны.")) {
+        return;
+    }
+
+    editor.innerHTML = "";
+    annotations = [];
+    dictionary = [];
+    renderDictionary();
+    currentFileName = "german-learning-text.json";
+    popup.classList.remove("visible");
+    updateWordCount();
+    setStatus("Новый текст");
+});
+
+document.getElementById("openBtn").addEventListener("click", () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+
+        if (file.name.toLowerCase().endsWith(".json")) {
+            const data = JSON.parse(text);
+
+            editor.innerHTML = data.html || "";
+            annotations = data.annotations || [];
+            dictionary = data.dictionary || [];
+            renderDictionary();
+            currentFileName = file.name;
+
+                    updateWordCount();
+            setStatus("Файл открыт", true);
+        } else {
+            editor.innerText = text;
+            annotations = [];
+            dictionary = [];
+            renderDictionary();
+            currentFileName = file.name.replace(/\.[^.]+$/, "") + ".json";
+
+                    updateWordCount();
+            setStatus("Текст открыт");
+        }
+
+        popup.classList.remove("visible");
+    } catch (error) {
+        console.error(error);
+        alert("Не удалось открыть файл.");
+    }
+
+    fileInput.value = "";
+});
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+    const data = {
+        version: 1,
+        title: currentFileName.replace(/\.json$/i, ""),
+        original_text: getPlainText(),
+        html: editor.innerHTML,
+        annotations,
+        dictionary,
+        translation_visible: translationToggle.checked,
+        saved_at: new Date().toISOString()
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json;charset=utf-8" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = currentFileName;
+    a.click();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    setStatus("Файл сохранён", true);
+});
+
+editor.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        document.getElementById("saveBtn").click();
+    }
+});
+
+/* Initial demo text */
+const initialText =
+    "Die Vorbereitung hat gut funktioniert. Teilnahmequote, Öffnungsraten und Klicks lagen über dem Marktdurchschnitt.";
+
+editor.innerText = initialText;
+renderDictionary();
+updateWordCount();
+
+</script>
+</body>
+</html>
