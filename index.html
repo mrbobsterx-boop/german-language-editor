@@ -272,56 +272,183 @@ async function loadLocalDictionary(){
   }
 }
 
+function uniqueStrings(items){
+  return [...new Set(items.filter(Boolean))];
+}
+
+function preserveCase(original, candidate){
+  if(!candidate) return candidate;
+  if(original[0] && original[0] === original[0].toUpperCase()){
+    return candidate.charAt(0).toUpperCase() + candidate.slice(1);
+  }
+  return candidate;
+}
+
+/*
+  German morphology layer.
+  We do NOT guess a lemma blindly: every generated candidate is checked
+  against FreeDict. This keeps the fallback conservative.
+*/
+const irregularGermanForms = {
+  bin:"sein", bist:"sein", ist:"sein", sind:"sein", seid:"sein",
+  war:"sein", warst:"sein", waren:"sein", gewesen:"sein",
+  habe:"haben", hast:"haben", hat:"haben", hatte:"haben", hatten:"haben", gehabt:"haben",
+  werde:"werden", wirst:"werden", wird:"werden", wurde:"werden", wurden:"werden", geworden:"werden",
+  kann:"können", kannst:"können", konnte:"können", konnten:"können", gekonnt:"können",
+  muss:"müssen", musst:"müssen", musste:"müssen", mussten:"müssen", gemusst:"müssen",
+  darf:"dürfen", darfst:"dürfen", durfte:"dürfen", durften:"dürfen", gedurft:"dürfen",
+  soll:"sollen", sollst:"sollen", sollte:"sollen", sollten:"sollen", gesollt:"sollen",
+  will:"wollen", willst:"wollen", wollte:"wollen", wollten:"wollen", gewollt:"wollen",
+  mag:"mögen", magst:"mögen", mochte:"mögen", mochten:"mögen", gemocht:"mögen",
+  ging:"gehen", gingen:"gehen", gegangen:"gehen",
+  kam:"kommen", kamen:"kommen", gekommen:"kommen",
+  sah:"sehen", siehst:"sehen", sieht:"sehen", sahen:"sehen", gesehen:"sehen",
+  zog:"ziehen", zogen:"ziehen", gezogen:"ziehen",
+  tat:"tun", tust:"tun", tut:"tun", taten:"tun", getan:"tun",
+  weiß:"wissen", weißt:"wissen", wusste:"wissen", wussten:"wissen", gewusst:"wissen",
+  brachte:"bringen", brachten:"bringen", gebracht:"bringen",
+  dachte:"denken", dachten:"denken", gedacht:"denken",
+  nahm:"nehmen", nimmst:"nehmen", nimmt:"nehmen", nahmen:"nehmen", genommen:"nehmen",
+  sprach:"sprechen", sprichst:"sprechen", spricht:"sprechen", sprachen:"sprechen", gesprochen:"sprechen",
+  gab:"geben", gibst:"geben", gibt:"geben", gaben:"geben", gegeben:"geben",
+  aß:"essen", isst:"essen", aßen:"essen", gegessen:"essen",
+  las:"lesen", liest:"lesen", lasen:"lesen", gelesen:"lesen",
+  schrieb:"schreiben", schrieben:"schreiben", geschrieben:"schreiben",
+  blieb:"bleiben", blieben:"bleiben", geblieben:"bleiben",
+  ließ:"lassen", lässt:"lassen", ließen:"lassen", gelassen:"lassen",
+  fiel:"fallen", fällst:"fallen", fällt:"fallen", fielen:"fallen", gefallen:"fallen",
+  hielt:"halten", hältst:"halten", hält:"halten", hielten:"halten", gehalten:"halten",
+  stand:"stehen", standen:"stehen", gestanden:"stehen",
+  fand:"finden", fanden:"finden", gefunden:"finden",
+  verlor:"verlieren", verloren:"verlieren",
+  bot:"bieten", boten:"bieten", geboten:"bieten",
+  bat:"bitten", baten:"bitten", gebeten:"bitten",
+  flog:"fliegen", flogen:"fliegen", geflogen:"fliegen",
+  half:"helfen", hilfst:"helfen", hilft:"helfen", halfen:"helfen", geholfen:"helfen",
+  lief:"laufen", läufst:"laufen", läuft:"laufen", liefen:"laufen", gelaufen:"laufen",
+  lag:"liegen", lagen:"liegen", gelegen:"liegen",
+  rief:"rufen", riefen:"rufen", gerufen:"rufen",
+  schlug:"schlagen", schlägst:"schlagen", schlägt:"schlagen", schlugen:"schlagen", geschlagen:"schlagen",
+  trug:"tragen", trägst:"tragen", trägt:"tragen", trugen:"tragen", getragen:"tragen",
+  traf:"treffen", triffst:"treffen", trifft:"treffen", trafen:"treffen", getroffen:"treffen",
+  trank:"trinken", tranken:"trinken", getrunken:"trinken",
+  wusch:"waschen", wäschst:"waschen", wäscht:"waschen", wuschen:"waschen", gewaschen:"waschen"
+};
+
+function umlautBack(word){
+  const variants = [word];
+  if(word.includes("ä")) variants.push(word.replace(/ä/g,"a"));
+  if(word.includes("ö")) variants.push(word.replace(/ö/g,"o"));
+  if(word.includes("ü")) variants.push(word.replace(/ü/g,"u"));
+  if(word.includes("äu")) variants.push(word.replace(/äu/g,"au"));
+  return uniqueStrings(variants);
+}
+
+function morphologyCandidates(word){
+  const w = normalizeWord(word).toLowerCase();
+  if(!w) return [];
+
+  const out = [];
+  const add = v => { if(v && v !== w) out.push(v); };
+
+  // Known irregular forms first.
+  if(irregularGermanForms[w]) add(irregularGermanForms[w]);
+
+  // Participles and common verb endings.
+  if(w.startsWith("ge") && w.length > 5){
+    add(w.replace(/^ge/, "").replace(/t$/,"en"));
+    add(w.replace(/^ge/, "").replace(/en$/,""));
+    add(w.replace(/^ge/, "").replace(/t$/,""));
+  }
+  if(/(st|t|en|te|ten|test|tet)$/.test(w)){
+    if(w.endsWith("st")) add(w.slice(0,-2)+"en");
+    if(w.endsWith("t")) add(w.slice(0,-1)+"en");
+    if(w.endsWith("te")) add(w.slice(0,-2)+"en");
+    if(w.endsWith("ten")) add(w.slice(0,-3)+"en");
+    if(w.endsWith("test")) add(w.slice(0,-4)+"en");
+    if(w.endsWith("tet")) add(w.slice(0,-3)+"en");
+  }
+
+  // Noun/adjective inflections. Generate multiple candidates and let the
+  // dictionary decide which one is a real lemma.
+  const suffixes = [
+    ["ern",""],["en",""],["er",""],["es",""],["em",""],["e",""],["n",""],["s",""]
+  ];
+  for(const [suffix,repl] of suffixes){
+    if(w.length > suffix.length + 2 && w.endsWith(suffix)){
+      const stem = w.slice(0,-suffix.length)+repl;
+      add(stem);
+      for(const u of umlautBack(stem)) add(u);
+    }
+  }
+
+  // German plural/declension patterns with a consonant + umlaut.
+  for(const stem of [...out]){
+    for(const u of umlautBack(stem)) add(u);
+  }
+
+  // Adjective degree/declension: schnellsten -> schnell, größeren -> groß etc.
+  for(const suffix of ["sten","ste","ster","stes","stem","st","sten","ere","erer","eres","erem","eren"]){
+    if(w.length > suffix.length + 2 && w.endsWith(suffix)){
+      const stem = w.slice(0,-suffix.length);
+      add(stem);
+      for(const u of umlautBack(stem)) add(u);
+    }
+  }
+
+  return uniqueStrings(out);
+}
+
+function lookupDirect(word){
+  return localDictionary.get(normalizeWord(word));
+}
+
+function buildWordInfo(selectedText, entry){
+  const grammar = entry.grammar || "";
+  let article = "—";
+  if(/noun\s*,\s*male/i.test(grammar)) article = "der";
+  else if(/noun\s*,\s*female/i.test(grammar)) article = "die";
+  else if(/noun\s*,\s*neutral/i.test(grammar)) article = "das";
+
+  return {
+    word:selectedText,
+    translation:entry.translation,
+    base:entry.word,
+    article,
+    grammar
+  };
+}
+
 function lookupWord(selectedText){
   const clean = normalizeWord(selectedText);
 
   if(!clean){
-    return {
-      word:selectedText,
-      translation:"—",
-      base:"—",
-      article:"—",
-      grammar:""
-    };
+    return {word:selectedText,translation:"—",base:"—",article:"—",grammar:""};
   }
 
-  const direct = localDictionary.get(clean);
+  // 1. Exact FreeDict match.
+  const direct = lookupDirect(clean);
+  if(direct) return buildWordInfo(selectedText, direct);
 
-  if(direct){
-    return {
-      word:selectedText,
-      translation:direct.translation,
-      base:direct.word,
-      article:"—",
-      grammar:direct.grammar
-    };
-  }
-
-  /*
-    Small normalization for German compounds/forms:
-    try the selected text with a trailing punctuation removed.
-  */
-  const withoutPunctuation = clean
-    .replace(/[.,!?;:…]+$/u, "")
-    .trim();
-
-  if(withoutPunctuation && withoutPunctuation !== clean){
-    const normalized = localDictionary.get(withoutPunctuation);
-
-    if(normalized){
-      return {
-        word:selectedText,
-        translation:normalized.translation,
-        base:normalized.word,
-        article:"—",
-        grammar:normalized.grammar
-      };
+  // 2. Morphological candidates -> only accept candidates present in FreeDict.
+  const candidates = morphologyCandidates(clean);
+  for(const candidate of candidates){
+    const entry = lookupDirect(candidate) || lookupDirect(preserveCase(clean,candidate));
+    if(entry){
+      return buildWordInfo(selectedText, entry);
     }
+  }
+
+  // 3. Final punctuation cleanup.
+  const withoutPunctuation = clean.replace(/[.,!?;:…]+$/u, "").trim();
+  if(withoutPunctuation && withoutPunctuation !== clean){
+    const entry = lookupDirect(withoutPunctuation);
+    if(entry) return buildWordInfo(selectedText, entry);
   }
 
   return {
     word:selectedText,
-    translation:"Нет точного совпадения в FreeDict",
+    translation:"Не найдено в словаре",
     base:"—",
     article:"—",
     grammar:""
