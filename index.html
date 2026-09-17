@@ -58,9 +58,39 @@ button,input{font:inherit}button{cursor:pointer}
 .popup-input:focus{border-color:var(--accent2)}
 .statusbar{height:34px;border-top:1px solid var(--line);padding:0 16px;display:flex;align-items:center;justify-content:space-between;color:#858585;font-size:12px;background:#222}
 .statusbar .saved{color:var(--green)}
-#fileInput{display:none}
+#fileInput,#memoryInput{display:none}
+.tab-btn.active{background:#3c566b;border-color:#55748d;color:#eef6fb}
+.view{display:none;flex:1;min-height:0}
+.view.active{display:flex}
+.learning-view{flex-direction:column;overflow:auto;padding:28px 34px 70px}
+.learning-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:24px}
+.learning-title{font-size:24px;font-weight:700;color:#dfe8ef}
+.learning-subtitle{font-size:13px;color:#888;margin-top:5px}
+.learning-stats{font-size:13px;color:#9d9d9d;text-align:right}
+.learning-main{display:grid;grid-template-columns:minmax(0,620px) minmax(260px,1fr);gap:28px;align-items:start}
+.study-card{background:#202020;border:1px solid #4b4b4b;border-radius:10px;padding:28px;min-height:310px;box-shadow:0 15px 40px rgba(0,0,0,.22)}
+.study-label{font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.study-word{font-size:36px;font-weight:700;color:#e5edf2;min-height:54px}
+.study-form{font-size:14px;color:#8fa9bb;margin-top:8px;min-height:20px}
+.study-translation{font-size:24px;color:#d6d6d6;min-height:38px;margin-top:30px}
+.study-translation.hidden{visibility:hidden}
+.study-actions{display:flex;gap:8px;margin-top:30px}
+.study-actions .btn{flex:1}
+.study-secondary{display:flex;gap:8px;margin-top:10px}
+.study-secondary .btn{flex:1;font-size:12px}
+.learning-list{background:#292929;border:1px solid #414141;border-radius:10px;overflow:hidden}
+.learning-list-head{padding:14px 16px;border-bottom:1px solid #414141;color:#aaa;font-size:13px}
+.learning-word-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #353535;cursor:pointer}
+.learning-word-item:last-child{border-bottom:0}
+.learning-word-item:hover{background:#303030}
+.learning-word-name{color:#e2e2e2;font-weight:600}
+.learning-word-translation{color:#999;font-size:12px;margin-top:3px}
+.learning-word-progress{font-size:11px;color:#777;white-space:nowrap}
+.learning-empty{color:#777;padding:22px 16px;font-size:13px;line-height:1.6}
 @media(max-width:800px){
   .workspace{grid-template-columns:1fr}.translation-column{display:none}
+  .learning-main{grid-template-columns:1fr}
+  .learning-view{padding:22px 18px 60px}
   .topbar{padding:0 12px}.editor{padding:22px 18px 100px}
 }
 </style>
@@ -73,6 +103,8 @@ button,input{font:inherit}button{cursor:pointer}
     <button class="btn" id="newBtn">Новый</button>
     <button class="btn" id="openBtn">Открыть</button>
     <button class="btn primary" id="saveBtn">Сохранить</button>
+    <button class="btn tab-btn active" id="editorTabBtn">Редактор</button>
+    <button class="btn tab-btn" id="learningTabBtn">Обучение</button>
     <button class="btn" id="memoryBtn">Подключить память</button>
     <label class="toggle">
       <input type="checkbox" id="dictionaryToggle" checked>
@@ -101,6 +133,40 @@ button,input{font:inherit}button{cursor:pointer}
   </div>
 </section>
 </main>
+
+<section class="view learning-view" id="learningView">
+  <div class="learning-head">
+    <div>
+      <div class="learning-title">Обучение слов</div>
+      <div class="learning-subtitle">Слова берутся из твоей памяти обучения</div>
+    </div>
+    <div class="learning-stats" id="learningStats">0 слов</div>
+  </div>
+
+  <div class="learning-main">
+    <div>
+      <div class="study-card">
+        <div class="study-label">Немецкое слово</div>
+        <div class="study-word" id="studyWord">Нет слов для обучения</div>
+        <div class="study-form" id="studyForm"></div>
+        <div class="study-translation hidden" id="studyTranslation">—</div>
+        <div class="study-actions">
+          <button class="btn primary" id="showTranslationBtn">Показать перевод</button>
+          <button class="btn" id="nextStudyBtn">Следующее</button>
+        </div>
+        <div class="study-secondary">
+          <button class="btn" id="repeatStudyBtn">Повторить</button>
+          <button class="btn" id="knowStudyBtn">Знаю</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="learning-list">
+      <div class="learning-list-head">Моя память</div>
+      <div id="learningList"></div>
+    </div>
+  </div>
+</section>
 
 <footer class="statusbar">
   <span id="status">Загрузка словаря...</span>
@@ -165,6 +231,14 @@ const statusEl = document.getElementById("status");
 const wordCountEl = document.getElementById("wordCount");
 const editorStatsEl = document.getElementById("editorStats");
 const workspace = document.getElementById("workspace");
+const learningView = document.getElementById("learningView");
+const editorTabBtn = document.getElementById("editorTabBtn");
+const learningTabBtn = document.getElementById("learningTabBtn");
+const learningListEl = document.getElementById("learningList");
+const learningStatsEl = document.getElementById("learningStats");
+const studyWordEl = document.getElementById("studyWord");
+const studyFormEl = document.getElementById("studyForm");
+const studyTranslationEl = document.getElementById("studyTranslation");
 const fileInput = document.getElementById("fileInput");
 
 let localDictionary = new Map();
@@ -1030,6 +1104,7 @@ document.addEventListener("scroll", () => {
 /* ---------- saved dictionary ---------- */
 
 function renderDictionary(){
+  renderLearningTab();
   if(!savedWords.length){
     dictionaryList.innerHTML =
       '<div class="dictionary-empty">' +
@@ -1056,6 +1131,114 @@ function renderDictionary(){
     });
   });
 }
+
+/* ---------- learning tab ---------- */
+let studyIndex = 0;
+let studyTranslationVisible = false;
+
+function ensureLearningStats(item){
+  if(!item) return;
+  if(typeof item.reviewed !== "number") item.reviewed = 0;
+  if(typeof item.known !== "boolean") item.known = false;
+}
+
+function renderLearningTab(){
+  savedWords.forEach(ensureLearningStats);
+  const total = savedWords.length;
+  const known = savedWords.filter(x => x.known).length;
+  learningStatsEl.textContent = total + " слов · знаю: " + known + " · повторить: " + (total-known);
+
+  if(!total){
+    learningListEl.innerHTML = '<div class="learning-empty">Пока нет слов для обучения. Сохраняй незнакомые слова в редакторе — они появятся здесь.</div>';
+    studyWordEl.textContent = "Нет слов для обучения";
+    studyFormEl.textContent = "";
+    studyTranslationEl.textContent = "—";
+    studyTranslationEl.classList.add("hidden");
+    return;
+  }
+
+  if(studyIndex >= total) studyIndex = 0;
+  const item = savedWords[studyIndex];
+  studyWordEl.textContent = item.word || "—";
+  studyFormEl.textContent = [item.article, item.base && item.base !== item.word ? item.base : "", item.grammar].filter(Boolean).join(" · ");
+  studyTranslationEl.textContent = item.translation || "—";
+  studyTranslationEl.classList.toggle("hidden", !studyTranslationVisible);
+
+  learningListEl.innerHTML = savedWords.map((item,index) => `
+    <div class="learning-word-item" data-study-index="${index}">
+      <div>
+        <div class="learning-word-name">${escapeHtml(item.word || "")}</div>
+        <div class="learning-word-translation">${escapeHtml(item.translation || "")}</div>
+      </div>
+      <div class="learning-word-progress">${item.known ? "Знаю" : "Повторить"} · ${Number(item.reviewed || 0)}</div>
+    </div>
+  `).join("");
+
+  learningListEl.querySelectorAll("[data-study-index]").forEach(el => {
+    el.addEventListener("click", () => {
+      studyIndex = Number(el.dataset.studyIndex);
+      studyTranslationVisible = false;
+      renderLearningTab();
+    });
+  });
+}
+
+function openLearningTab(){
+  workspace.classList.remove("active");
+  workspace.style.display = "none";
+  learningView.classList.add("active");
+  editorTabBtn.classList.remove("active");
+  learningTabBtn.classList.add("active");
+  renderLearningTab();
+}
+
+function openEditorTab(){
+  learningView.classList.remove("active");
+  workspace.style.display = "grid";
+  editorTabBtn.classList.add("active");
+  learningTabBtn.classList.remove("active");
+}
+
+editorTabBtn.addEventListener("click", openEditorTab);
+learningTabBtn.addEventListener("click", openLearningTab);
+
+document.getElementById("showTranslationBtn").addEventListener("click", () => {
+  if(!savedWords.length) return;
+  studyTranslationVisible = !studyTranslationVisible;
+  studyTranslationEl.classList.toggle("hidden", !studyTranslationVisible);
+  document.getElementById("showTranslationBtn").textContent = studyTranslationVisible ? "Скрыть перевод" : "Показать перевод";
+});
+
+document.getElementById("nextStudyBtn").addEventListener("click", () => {
+  if(!savedWords.length) return;
+  studyIndex = (studyIndex + 1) % savedWords.length;
+  studyTranslationVisible = false;
+  document.getElementById("showTranslationBtn").textContent = "Показать перевод";
+  renderLearningTab();
+});
+
+document.getElementById("repeatStudyBtn").addEventListener("click", async () => {
+  if(!savedWords.length) return;
+  const item = savedWords[studyIndex];
+  ensureLearningStats(item);
+  item.reviewed += 1;
+  item.known = false;
+  saveLearningMemory();
+  renderLearningTab();
+});
+
+document.getElementById("knowStudyBtn").addEventListener("click", async () => {
+  if(!savedWords.length) return;
+  const item = savedWords[studyIndex];
+  ensureLearningStats(item);
+  item.reviewed += 1;
+  item.known = true;
+  saveLearningMemory();
+  studyIndex = (studyIndex + 1) % savedWords.length;
+  studyTranslationVisible = false;
+  document.getElementById("showTranslationBtn").textContent = "Показать перевод";
+  renderLearningTab();
+});
 
 function saveWordToDictionary(){
   if(!currentSelection) return;
