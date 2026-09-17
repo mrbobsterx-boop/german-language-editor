@@ -73,6 +73,7 @@ button,input{font:inherit}button{cursor:pointer}
     <button class="btn" id="newBtn">Новый</button>
     <button class="btn" id="openBtn">Открыть</button>
     <button class="btn primary" id="saveBtn">Сохранить</button>
+    <button class="btn" id="memoryBtn">Подключить память</button>
     <label class="toggle">
       <input type="checkbox" id="dictionaryToggle" checked>
       Слова для обучения
@@ -108,6 +109,7 @@ button,input{font:inherit}button{cursor:pointer}
 </div>
 
 <input type="file" id="fileInput" accept=".json,.txt">
+<input type="file" id="memoryInput" accept=".json" style="display:none">
 
 <div class="selection-popup" id="popup">
   <div class="popup-word" id="popupWord">Wort</div>
@@ -168,7 +170,12 @@ const fileInput = document.getElementById("fileInput");
 let localDictionary = new Map();
 let learningDictionary = new Map();
 let savedWords = [];
-const LEARNING_MEMORY_KEY = "german-language-learning-memory-v1";
+const LEARNING_MEMORY_KEY = "german-language-learning-memory-v2";
+const MEMORY_HANDLE_DB = "german-language-editor-memory-db";
+const MEMORY_HANDLE_STORE = "handles";
+const MEMORY_HANDLE_KEY = "learning-memory-file";
+let learningMemoryHandle = null;
+let memoryFileName = "learning-words.json";
 let currentSelection = null;
 let selectionJustFinished = false;
 let pinnedPopup = false;
@@ -187,12 +194,158 @@ function loadLearningMemory(){
   renderDictionary();
 }
 
-function saveLearningMemory(){
+function saveLearningMemoryLocal(){
   try{
     localStorage.setItem(LEARNING_MEMORY_KEY, JSON.stringify(savedWords));
+    return true;
   }catch(error){
     console.error(error);
-    statusEl.textContent = "Не удалось сохранить память слов";
+    statusEl.textContent = "Не удалось сохранить память слов в браузере";
+    return false;
+  }
+}
+
+function memoryFilePayload(){
+  return {
+    version: 1,
+    type: "german-language-learning-memory",
+    savedAt: new Date().toISOString(),
+    words: savedWords
+  };
+}
+
+async function saveLearningMemoryFile(){
+  if(!learningMemoryHandle) return false;
+
+  try{
+    let permission = "granted";
+    if(learningMemoryHandle.queryPermission){
+      permission = await learningMemoryHandle.queryPermission({mode:"readwrite"});
+    }
+    if(permission !== "granted" && learningMemoryHandle.requestPermission){
+      permission = await learningMemoryHandle.requestPermission({mode:"readwrite"});
+    }
+    if(permission !== "granted") return false;
+
+    const writable = await learningMemoryHandle.createWritable();
+    await writable.write(JSON.stringify(memoryFilePayload(), null, 2));
+    await writable.close();
+    return true;
+  }catch(error){
+    console.error(error);
+    return false;
+  }
+}
+
+async function saveLearningMemory(){
+  const localOk = saveLearningMemoryLocal();
+  const fileOk = await saveLearningMemoryFile();
+
+  if(fileOk){
+    statusEl.textContent = "Слово сохранено в памяти и в файле " + memoryFileName;
+  }else if(localOk){
+    statusEl.textContent = learningMemoryHandle
+      ? "Слово сохранено в памяти браузера; файл памяти недоступен"
+      : "Слово сохранено в памяти браузера";
+  }
+}
+
+function openMemoryDb(){
+  return new Promise((resolve,reject)=>{
+    if(!window.indexedDB){ reject(new Error("IndexedDB недоступна")); return; }
+    const request = indexedDB.open(MEMORY_HANDLE_DB, 1);
+    request.onupgradeneeded = () => {
+      if(!request.result.objectStoreNames.contains(MEMORY_HANDLE_STORE)){
+        request.result.createObjectStore(MEMORY_HANDLE_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveMemoryHandle(handle){
+  try{
+    const db = await openMemoryDb();
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(MEMORY_HANDLE_STORE, "readwrite");
+      tx.objectStore(MEMORY_HANDLE_STORE).put(handle, MEMORY_HANDLE_KEY);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  }catch(error){
+    console.error(error);
+  }
+}
+
+async function loadMemoryHandle(){
+  try{
+    const db = await openMemoryDb();
+    const handle = await new Promise((resolve,reject)=>{
+      const tx = db.transaction(MEMORY_HANDLE_STORE, "readonly");
+      const request = tx.objectStore(MEMORY_HANDLE_STORE).get(MEMORY_HANDLE_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if(handle){
+      learningMemoryHandle = handle;
+      memoryFileName = handle.name || memoryFileName;
+      document.getElementById("memoryBtn").textContent = "Память: " + memoryFileName;
+    }
+  }catch(error){
+    console.error(error);
+  }
+}
+
+async function connectMemoryFile(){
+  try{
+    if(!window.showSaveFilePicker){
+      // Universal fallback: import/export still works, while localStorage
+      // keeps this browser's memory after reload.
+      memoryInput.click();
+      return;
+    }
+
+    const handle = await window.showSaveFilePicker({
+      suggestedName: "learning-words.json",
+      types: [{
+        description: "Файл памяти слов",
+        accept: {"application/json": [".json"]}
+      }]
+    });
+
+    learningMemoryHandle = handle;
+    memoryFileName = handle.name || "learning-words.json";
+    await saveMemoryHandle(handle);
+    await saveLearningMemoryFile();
+    document.getElementById("memoryBtn").textContent = "Память: " + memoryFileName;
+    statusEl.textContent = "Файл памяти подключён: " + memoryFileName;
+  }catch(error){
+    if(error && error.name === "AbortError") return;
+    console.error(error);
+    statusEl.textContent = "Не удалось подключить файл памяти";
+  }
+}
+
+async function importMemoryFile(file){
+  if(!file) return;
+  try{
+    const data = JSON.parse(await file.text());
+    const words = Array.isArray(data) ? data : data.words;
+    if(!Array.isArray(words)) throw new Error("Неверный формат файла памяти");
+
+    savedWords = words.filter(item => item && item.word && item.translation);
+    injectLearningWordsIntoDictionary();
+    saveLearningMemoryLocal();
+    renderDictionary();
+    refreshMissingWordMarks();
+    updateWordCount();
+    statusEl.textContent = "Память слов загружена из файла";
+  }catch(error){
+    console.error(error);
+    statusEl.textContent = "Ошибка открытия файла памяти";
   }
 }
 
@@ -1003,6 +1156,17 @@ document
   .getElementById("annotateBtn")
   .addEventListener("click", addAnnotation);
 
+/* ---------- learning memory file ---------- */
+
+document.getElementById("memoryBtn").addEventListener("click", connectMemoryFile);
+
+const memoryInput = document.getElementById("memoryInput");
+memoryInput.addEventListener("change", async () => {
+  const file = memoryInput.files[0];
+  await importMemoryFile(file);
+  memoryInput.value = "";
+});
+
 /* ---------- save/open ---------- */
 
 function getDocumentData(){
@@ -1225,6 +1389,7 @@ editor.addEventListener("input", () => {
 /* ---------- start ---------- */
 
 loadLearningMemory();
+loadMemoryHandle();
 updateWordCount();
 loadLocalDictionary().then(() => {
   injectLearningWordsIntoDictionary();
