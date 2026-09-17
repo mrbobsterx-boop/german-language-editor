@@ -6,14 +6,13 @@
 <title>German Language Editor</title>
 <style>
 :root{
-  --bg:#242424;--panel:#292929;--panel2:#303030;--line:#474747;
-  --text:#d7d7d7;--muted:#9d9d9d;--heading:#b9c9d8;
-  --accent:#8fb3cf;--accent2:#6f96b4;--popup:#202020;--green:#8db69b;
+  --bg:#242424;--panel:#292929;--line:#474747;--text:#d7d7d7;
+  --muted:#9d9d9d;--heading:#b9c9d8;--accent2:#6f96b4;
+  --popup:#202020;--green:#8db69b;
 }
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
-button,input{font:inherit}
-button{cursor:pointer}
+button,input{font:inherit}button{cursor:pointer}
 .app{min-height:100vh;display:flex;flex-direction:column}
 .topbar{height:64px;padding:0 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:#222}
 .brand{font-size:19px;font-weight:700;color:var(--heading)}
@@ -23,6 +22,7 @@ button{cursor:pointer}
 .btn.primary{background:#3c566b;border-color:#55748d;color:#eef6fb}
 .toggle{display:flex;align-items:center;gap:7px;margin-left:8px;color:#bbb;font-size:13px;user-select:none}
 .workspace{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}
+.workspace.single{grid-template-columns:1fr}
 .column{min-width:0;display:flex;flex-direction:column}
 .column+.column{border-left:1px solid var(--line)}
 .column-header{height:48px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);color:var(--heading);font-weight:700;background:#272727}
@@ -36,6 +36,7 @@ button{cursor:pointer}
 .dictionary-word{color:#e6e6e6;font-size:16px;font-weight:600;line-height:1.35}
 .dictionary-form{color:#808080;font-size:12px;margin-top:4px}
 .dictionary-translation{color:#c9c9c9;font-size:15px;line-height:1.4;text-align:right;max-width:52%}
+.dictionary-status{padding:8px 22px;color:#888;font-size:11px;border-bottom:1px solid #2b2b2b}
 .annotation{display:inline;background:rgba(143,179,207,.13);border-bottom:1px solid #6f96b4;border-radius:2px;padding:1px 2px}
 .annotation-note{color:#9eb9cc;font-size:.78em;margin-left:3px;opacity:.95}
 .selection-popup{position:fixed;z-index:1000;width:330px;background:var(--popup);border:1px solid #555;border-radius:8px;box-shadow:0 15px 45px rgba(0,0,0,.45);padding:14px;display:none}
@@ -55,7 +56,6 @@ button{cursor:pointer}
   .workspace{grid-template-columns:1fr}.translation-column{display:none}
   .topbar{padding:0 12px}.editor{padding:22px 18px 100px}
 }
-.dictionary-status{padding:8px 22px;color:#888;font-size:11px;border-bottom:1px solid #2b2b2b}
 </style>
 </head>
 <body>
@@ -66,7 +66,10 @@ button{cursor:pointer}
     <button class="btn" id="newBtn">Новый</button>
     <button class="btn" id="openBtn">Открыть</button>
     <button class="btn primary" id="saveBtn">Сохранить</button>
-    <label class="toggle"><input type="checkbox" id="dictionaryToggle" checked> Слова для обучения</label>
+    <label class="toggle">
+      <input type="checkbox" id="dictionaryToggle" checked>
+      Слова для обучения
+    </label>
   </div>
 </header>
 
@@ -99,10 +102,25 @@ button{cursor:pointer}
 <div class="selection-popup" id="popup">
   <div class="popup-word" id="popupWord">Wort</div>
   <div class="popup-form" id="popupForm">—</div>
-  <div class="popup-row"><div class="popup-label">Перевод</div><div class="popup-value" id="popupTranslation">—</div></div>
-  <div class="popup-row"><div class="popup-label">Базовая форма</div><div class="popup-value" id="popupBase">—</div></div>
-  <div class="popup-row"><div class="popup-label">Артикль</div><div class="popup-value" id="popupArticle">—</div></div>
-  <input id="annotationInput" class="popup-input" placeholder="Перевод для пометки в тексте...">
+
+  <div class="popup-row">
+    <div class="popup-label">Перевод</div>
+    <div class="popup-value" id="popupTranslation">—</div>
+  </div>
+
+  <div class="popup-row">
+    <div class="popup-label">Базовая форма</div>
+    <div class="popup-value" id="popupBase">—</div>
+  </div>
+
+  <div class="popup-row">
+    <div class="popup-label">Артикль</div>
+    <div class="popup-value" id="popupArticle">—</div>
+  </div>
+
+  <input id="annotationInput" class="popup-input"
+         placeholder="Перевод для пометки в тексте...">
+
   <div class="popup-actions">
     <button class="btn" id="annotateBtn">Добавить в текст</button>
     <button class="btn primary" id="dictionaryBtn">Сохранить в словарь</button>
@@ -111,17 +129,21 @@ button{cursor:pointer}
 
 <script>
 /*
-  LOCAL GERMAN-RUSSIAN DICTIONARY
-  --------------------------------
-  The file is expected at:
-      data/de-ru_wiki.txt
+  German Language Editor
+  ======================
+  Dictionary source:
+      data/de-ru-freedict.json
 
-  Format:
-      German<TAB>Russian
+  Expected JSON:
+  [
+    {"word":"machen","translation":["делать"],"grammar":"verb"},
+    ...
+  ]
 
-  This version loads the file locally and searches it in memory.
-  The existing mouseup popup behavior is intentionally preserved.
+  Also accepts an object with a "words" array.
 */
+
+/* ---------- state ---------- */
 
 const editor = document.getElementById("editor");
 const popup = document.getElementById("popup");
@@ -136,106 +158,135 @@ let localDictionary = new Map();
 let savedWords = [];
 let currentSelection = null;
 let selectionJustFinished = false;
-let dictionaryLoaded = false;
 
 /* ---------- dictionary ---------- */
 
 function normalizeWord(value){
-  return value
+  return String(value || "")
     .trim()
     .toLocaleLowerCase("de-DE")
     .replace(/^[„“"«»'‘’([{]+/u, "")
-    .replace(/[.,!?;:…„“"«»'‘’)\]}]+$/u, "");
+    .replace(/[.,!?;:…„“"«»)\]}]+$/u, "");
 }
 
-function addDictionaryEntry(de, ru){
-  de = (de || "").trim();
-  ru = (ru || "").trim();
-  if(!de || !ru) return;
+function normalizeTranslation(value){
+  if(Array.isArray(value)) return value.filter(Boolean).join("; ");
+  return String(value || "").trim();
+}
 
-  const key = normalizeWord(de);
+function addDictionaryEntry(entry){
+  if(!entry || typeof entry !== "object") return;
+
+  const word = String(
+    entry.word ??
+    entry.headword ??
+    entry.de ??
+    entry.german ??
+    ""
+  ).trim();
+
+  const translation = normalizeTranslation(
+    entry.translation ??
+    entry.translations ??
+    entry.ru ??
+    entry.russian ??
+    ""
+  );
+
+  if(!word || !translation) return;
+
+  const key = normalizeWord(word);
   if(!key) return;
 
-  // Keep the first entry. This prevents a later Wikipedia-style duplicate
-  // from overwriting an already found translation.
   if(!localDictionary.has(key)){
     localDictionary.set(key, {
-      word: de,
-      translation: ru
+      word,
+      translation,
+      grammar: String(entry.grammar ?? entry.pos ?? "").trim()
     });
   }
 }
 
 async function loadLocalDictionary(){
   try{
-    const response = await fetch("data/de-ru_wiki.txt", {cache:"no-store"});
-    if(!response.ok) throw new Error("HTTP " + response.status);
+    const response = await fetch("data/de-ru-freedict.json", {
+      cache: "no-store"
+    });
 
-    const text = await response.text();
-    const lines = text.split(/\r?\n/);
-
-    for(const line of lines){
-      const tab = line.indexOf("\t");
-      if(tab === -1) continue;
-      const de = line.slice(0, tab);
-      const ru = line.slice(tab + 1);
-      addDictionaryEntry(de, ru);
+    if(!response.ok){
+      throw new Error("HTTP " + response.status);
     }
 
-    dictionaryLoaded = true;
+    const data = await response.json();
+
+    if(Array.isArray(data)){
+      for(const entry of data) addDictionaryEntry(entry);
+    }else if(data && Array.isArray(data.words)){
+      for(const entry of data.words) addDictionaryEntry(entry);
+    }else if(data && typeof data === "object"){
+      /*
+        Supports a compact object dictionary too:
+        {
+          "machen": "делать",
+          "gehen": ["идти","ходить"]
+        }
+      */
+      for(const [word, value] of Object.entries(data)){
+        if(value && typeof value === "object" && !Array.isArray(value)){
+          addDictionaryEntry({word, ...value});
+        }else{
+          addDictionaryEntry({word, translation:value});
+        }
+      }
+    }
+
     dictionaryStatus.textContent =
-      "Локальный словарь: " + localDictionary.size.toLocaleString("ru-RU") + " записей";
+      "FreeDict DE→RU: " +
+      localDictionary.size.toLocaleString("ru-RU") +
+      " записей";
+
     statusEl.textContent = "Словарь загружен";
   }catch(error){
     console.error(error);
-    dictionaryStatus.textContent = "Не удалось загрузить data/de-ru_wiki.txt";
-    statusEl.textContent = "Словарь не загружен";
+
+    dictionaryStatus.textContent =
+      "Не удалось загрузить data/de-ru-freedict.json";
+
+    statusEl.textContent = "Ошибка загрузки словаря";
   }
 }
 
-/*
-  The current file is a Wikipedia bilingual reference dataset.
-  Therefore we deliberately do NOT invent article/base-form information.
-  We show the dictionary translation when it exists.
-*/
 function lookupWord(selectedText){
   const clean = normalizeWord(selectedText);
 
   if(!clean){
     return {
-      word: selectedText,
-      translation: "—",
-      base: "—",
-      article: "—"
+      word:selectedText,
+      translation:"—",
+      base:"—",
+      article:"—",
+      grammar:""
     };
   }
 
   const direct = localDictionary.get(clean);
+
   if(direct){
     return {
-      word: selectedText,
-      translation: direct.translation,
-      base: direct.word,
-      article: "—"
-    };
-  }
-
-  // Try the exact text without punctuation/case changes.
-  const exact = localDictionary.get(selectedText.trim().toLocaleLowerCase("de-DE"));
-  if(exact){
-    return {
-      word: selectedText,
-      translation: exact.translation,
-      base: exact.word,
-      article: "—"
+      word:selectedText,
+      translation:direct.translation,
+      base:direct.word,
+      article:"—",
+      grammar:direct.grammar
     };
   }
 
   return {
-    word: selectedText,
-    translation: "Нет точного совпадения в локальном словаре",
-    base: "—",
-    article: "—"
+    word:selectedText,
+    translation:"Нет точного совпадения в FreeDict",
+    base:"—",
+    article:"—",
+    grammar:""
   };
 }
 
@@ -243,13 +294,18 @@ function lookupWord(selectedText){
 
 function getEditorSelection(){
   const selection = window.getSelection();
-  if(!selection || selection.isCollapsed || !selection.rangeCount) return null;
+
+  if(!selection || selection.isCollapsed || !selection.rangeCount){
+    return null;
+  }
 
   const text = selection.toString().trim();
+
   if(!text) return null;
 
   const anchorInside = editor.contains(selection.anchorNode);
   const focusInside = editor.contains(selection.focusNode);
+
   if(!anchorInside || !focusInside) return null;
 
   return {
@@ -265,11 +321,18 @@ function positionPopup(){
   const popupWidth = 330;
   const popupHeight = popup.offsetHeight || 260;
 
-  let left = rect.left + (rect.width / 2) - (popupWidth / 2);
-  left = Math.max(10, Math.min(left, window.innerWidth - popupWidth - 10));
+  let left = rect.left + rect.width / 2 - popupWidth / 2;
+
+  left = Math.max(
+    10,
+    Math.min(left, window.innerWidth - popupWidth - 10)
+  );
 
   let top = rect.top - popupHeight - 10;
-  if(top < 10) top = rect.bottom + 10;
+
+  if(top < 10){
+    top = rect.bottom + 10;
+  }
 
   popup.style.left = left + "px";
   popup.style.top = top + "px";
@@ -277,6 +340,7 @@ function positionPopup(){
 
 function showSelectionPopup(){
   const selected = getEditorSelection();
+
   if(!selected) return;
 
   currentSelection = selected;
@@ -284,13 +348,22 @@ function showSelectionPopup(){
   const info = lookupWord(selected.text);
 
   document.getElementById("popupWord").textContent = selected.text;
-  document.getElementById("popupForm").textContent = info.base !== "—"
-    ? "Форма из словаря: " + info.base
-    : "Выделенный фрагмент";
 
-  document.getElementById("popupTranslation").textContent = info.translation;
-  document.getElementById("popupBase").textContent = info.base;
-  document.getElementById("popupArticle").textContent = info.article;
+  document.getElementById("popupForm").textContent =
+    info.grammar
+      ? info.grammar
+      : info.base !== "—"
+        ? "Словарная форма: " + info.base
+        : "Выделенный фрагмент";
+
+  document.getElementById("popupTranslation").textContent =
+    info.translation;
+
+  document.getElementById("popupBase").textContent =
+    info.base;
+
+  document.getElementById("popupArticle").textContent =
+    info.article;
 
   document.getElementById("annotationInput").value =
     info.translation.startsWith("Нет точного")
@@ -298,23 +371,29 @@ function showSelectionPopup(){
       : info.translation;
 
   popup.classList.add("visible");
+
   requestAnimationFrame(positionPopup);
 }
 
 /*
   IMPORTANT:
-  Popup opens on mouseup, not selectionchange.
-  This keeps it open after the user releases the mouse.
+  Popup opens on mouseup.
+  This preserves the behavior where the popup stays open
+  after the mouse selection is finished.
 */
 editor.addEventListener("mouseup", () => {
   setTimeout(() => {
     showSelectionPopup();
+
     selectionJustFinished = true;
-    setTimeout(() => selectionJustFinished = false, 150);
+
+    setTimeout(() => {
+      selectionJustFinished = false;
+    }, 150);
   }, 0);
 });
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", event => {
   if(popup.contains(event.target)) return;
   if(selectionJustFinished) return;
 
@@ -323,26 +402,37 @@ document.addEventListener("click", (event) => {
 });
 
 window.addEventListener("resize", positionPopup);
+
 document.addEventListener("scroll", () => {
-  if(popup.classList.contains("visible")) positionPopup();
+  if(popup.classList.contains("visible")){
+    positionPopup();
+  }
 }, true);
 
-/* ---------- dictionary panel ---------- */
+/* ---------- saved dictionary ---------- */
 
 function renderDictionary(){
   if(!savedWords.length){
     dictionaryList.innerHTML =
-      '<div class="dictionary-empty">Сохранённые слова появятся здесь.</div>';
+      '<div class="dictionary-empty">' +
+      'Сохранённые слова появятся здесь.' +
+      '</div>';
     return;
   }
 
   dictionaryList.innerHTML = savedWords.map((item, index) => `
     <div class="dictionary-item" data-index="${index}">
       <div>
-        <div class="dictionary-word">${escapeHtml(item.word)}</div>
-        <div class="dictionary-form">${escapeHtml(item.base || "")}</div>
+        <div class="dictionary-word">
+          ${escapeHtml(item.word)}
+        </div>
+        <div class="dictionary-form">
+          ${escapeHtml(item.base || "")}
+        </div>
       </div>
-      <div class="dictionary-translation">${escapeHtml(item.translation || "")}</div>
+      <div class="dictionary-translation">
+        ${escapeHtml(item.translation || "")}
+      </div>
     </div>
   `).join("");
 }
@@ -352,11 +442,17 @@ function saveWordToDictionary(){
 
   const selectedText = currentSelection.text;
   const info = lookupWord(selectedText);
-  const manual = document.getElementById("annotationInput").value.trim();
+
+  const manual =
+    document.getElementById("annotationInput").value.trim();
 
   const translation =
     manual ||
-    (info.translation.startsWith("Нет точного") ? "" : info.translation);
+    (
+      info.translation.startsWith("Нет точного")
+        ? ""
+        : info.translation
+    );
 
   if(!translation){
     statusEl.textContent = "Нет перевода для сохранения";
@@ -364,39 +460,41 @@ function saveWordToDictionary(){
   }
 
   const exists = savedWords.some(
-    item => normalizeWord(item.word) === normalizeWord(selectedText)
+    item =>
+      normalizeWord(item.word) === normalizeWord(selectedText)
   );
 
   if(!exists){
     savedWords.push({
-      word: selectedText,
-      base: info.base === "—" ? selectedText : info.base,
-      article: info.article,
+      word:selectedText,
+      base:info.base === "—" ? selectedText : info.base,
+      article:info.article,
       translation
     });
+
     renderDictionary();
   }
 
   statusEl.textContent = "Слово сохранено";
 }
 
-document.getElementById("dictionaryBtn").addEventListener("click", saveWordToDictionary);
+document
+  .getElementById("dictionaryBtn")
+  .addEventListener("click", saveWordToDictionary);
 
 /* ---------- annotation ---------- */
 
 function addAnnotation(){
   if(!currentSelection) return;
 
-  const note = document.getElementById("annotationInput").value.trim();
+  const note =
+    document.getElementById("annotationInput").value.trim();
+
   if(!note){
     statusEl.textContent = "Введите перевод для пометки";
     return;
   }
 
-  /*
-    We use the saved Range only for the selected fragment.
-    The popup itself does not affect the selection.
-  */
   const range = currentSelection.range.cloneRange();
 
   try{
@@ -411,6 +509,7 @@ function addAnnotation(){
     noteSpan.textContent = "(" + note + ")";
 
     const fragment = document.createDocumentFragment();
+
     fragment.appendChild(wrapper);
     fragment.appendChild(noteSpan);
 
@@ -418,7 +517,9 @@ function addAnnotation(){
 
     popup.classList.remove("visible");
     currentSelection = null;
+
     statusEl.textContent = "Пометка добавлена";
+
     updateWordCount();
   }catch(error){
     console.error(error);
@@ -426,50 +527,73 @@ function addAnnotation(){
   }
 }
 
-document.getElementById("annotateBtn").addEventListener("click", addAnnotation);
+document
+  .getElementById("annotateBtn")
+  .addEventListener("click", addAnnotation);
 
-/* ---------- file save/open ---------- */
+/* ---------- save/open ---------- */
 
 function getDocumentData(){
   return {
-    version: 2,
-    originalHtml: editor.innerHTML,
+    version:2,
+    originalHtml:editor.innerHTML,
     savedWords,
-    savedAt: new Date().toISOString()
+    savedAt:new Date().toISOString()
   };
 }
 
 document.getElementById("saveBtn").addEventListener("click", () => {
-  const data = JSON.stringify(getDocumentData(), null, 2);
-  const blob = new Blob([data], {type:"application/json;charset=utf-8"});
+  const data = JSON.stringify(
+    getDocumentData(),
+    null,
+    2
+  );
+
+  const blob = new Blob(
+    [data],
+    {type:"application/json;charset=utf-8"}
+  );
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+
   a.href = url;
   a.download = "german-language-document.json";
   a.click();
+
   URL.revokeObjectURL(url);
+
   statusEl.textContent = "Документ сохранён";
 });
 
-document.getElementById("openBtn").addEventListener("click", () => fileInput.click());
+document.getElementById("openBtn").addEventListener("click", () => {
+  fileInput.click();
+});
 
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
+
   if(!file) return;
 
   try{
     const text = await file.text();
     const data = JSON.parse(text);
 
-    editor.innerHTML = data.originalHtml || data.html || "";
-    savedWords = Array.isArray(data.savedWords)
-      ? data.savedWords
-      : Array.isArray(data.words)
-        ? data.words
-        : [];
+    editor.innerHTML =
+      data.originalHtml ||
+      data.html ||
+      "";
+
+    savedWords =
+      Array.isArray(data.savedWords)
+        ? data.savedWords
+        : Array.isArray(data.words)
+          ? data.words
+          : [];
 
     renderDictionary();
     updateWordCount();
+
     statusEl.textContent = "Документ открыт";
   }catch(error){
     console.error(error);
@@ -483,15 +607,23 @@ document.getElementById("newBtn").addEventListener("click", () => {
   editor.innerHTML = "";
   savedWords = [];
   currentSelection = null;
+
   popup.classList.remove("visible");
+
   renderDictionary();
   updateWordCount();
+
   statusEl.textContent = "Новый документ";
 });
 
-document.getElementById("dictionaryToggle").addEventListener("change", (event) => {
-  workspace.classList.toggle("single", !event.target.checked);
-});
+document
+  .getElementById("dictionaryToggle")
+  .addEventListener("change", event => {
+    workspace.classList.toggle(
+      "single",
+      !event.target.checked
+    );
+  });
 
 /* ---------- helpers ---------- */
 
@@ -506,13 +638,19 @@ function escapeHtml(value){
 
 function updateWordCount(){
   const text = editor.innerText || "";
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  wordCountEl.textContent = words + " " + (words === 1 ? "слово" : "слов");
+  const words = text.trim()
+    ? text.trim().split(/\s+/).length
+    : 0;
+
+  wordCountEl.textContent =
+    words + " " +
+    (words === 1 ? "слово" : "слов");
 }
 
 editor.addEventListener("input", updateWordCount);
 
-/* Start */
+/* ---------- start ---------- */
+
 renderDictionary();
 updateWordCount();
 loadLocalDictionary();
