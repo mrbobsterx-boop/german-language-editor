@@ -679,6 +679,16 @@ function showSelectionPopup() {
     positionPopup(currentSelection.range.getBoundingClientRect());
 }
 
+let ignoreNextOutsideClick = false;
+
+editor.addEventListener("mouseup", () => {
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim()) {
+        ignoreNextOutsideClick = true;
+        setTimeout(() => { ignoreNextOutsideClick = false; }, 0);
+    }
+});
+
 document.addEventListener("selectionchange", () => {
     /*
       Не закрываем окно автоматически.
@@ -697,7 +707,13 @@ document.addEventListener("click", (event) => {
     // Клик внутри окна ничего не закрывает.
     if (popup.contains(event.target)) return;
 
-    // Любой клик вне окна закрывает его.
+    // Не закрываем окно кликом, который завершает выделение текста.
+    if (ignoreNextOutsideClick) {
+        ignoreNextOutsideClick = false;
+        return;
+    }
+
+    // Любой следующий клик вне окна закрывает его.
     popup.classList.remove("visible");
     currentSelection = null;
 });
