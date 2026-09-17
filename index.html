@@ -354,6 +354,30 @@ function morphologyCandidates(word){
   // Known irregular forms first.
   if(irregularGermanForms[w]) add(irregularGermanForms[w]);
 
+  // Separable-prefix infinitives with "zu":
+  // vorbeizukommen -> vorbeikommen -> kommen
+  // aufzustehen -> aufstehen -> stehen
+  // mitzunehmen -> mitnehmen -> nehmen
+  // We generate both the complete verb and its core verb; every candidate
+  // is checked against FreeDict before it is accepted.
+  const separablePrefixes = [
+    "ab", "an", "auf", "aus", "ein", "fest", "fort", "heim", "her",
+    "hin", "los", "mit", "nach", "vor", "weg", "weiter", "wieder",
+    "zu", "zurück", "zusammen", "vorbei", "herein", "heraus", "hinein",
+    "hinaus", "hinauf", "hinab", "entgegen", "empor"
+  ];
+  if(w.includes("zu")){
+    for(const prefix of separablePrefixes){
+      const marker = prefix + "zu";
+      if(w.startsWith(marker) && w.length > marker.length + 2){
+        const core = w.slice(marker.length);
+        // Infinitive: ...zukommen -> ...kommen
+        add(prefix + core);
+        add(core);
+      }
+    }
+  }
+
   // Participles and common verb endings.
   if(w.startsWith("ge") && w.length > 5){
     add(w.replace(/^ge/, "").replace(/t$/,"en"));
