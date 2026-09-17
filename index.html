@@ -165,8 +165,6 @@ let savedWords = [];
 let currentSelection = null;
 let selectionJustFinished = false;
 let pinnedPopup = false;
-let hoverWordData = null;
-let hoverTimer = null;
 
 /* ---------- dictionary ---------- */
 
@@ -660,84 +658,100 @@ function showHoverPopup(wordData){
 }
 
 /*
-  WORD INTERACTION
-  ----------------
-  Hover a word -> temporary popup.
-  Click the word -> popup becomes pinned.
-  Click the same word again -> popup disappears.
-  Click empty editor space -> popup disappears.
-  Move the mouse away from a hovered word -> popup disappears,
-  unless it was pinned.
+  WORD INTERACTION — STRICT TWO-STATE BEHAVIOR
+  ---------------------------------------------
+  1. Mouse over a real word => one preview popup.
+  2. Click that word => popup becomes pinned.
+  3. While pinned, mouse movement does NOTHING.
+  4. Click inside popup => work with popup, do not close it.
+  5. Click anywhere else => close popup.
+  6. Click another word after closing => opens/pins that word.
 */
+
+let hoverWordKey = null;
+let hoverCloseTimer = null;
+
+function makeWordKey(wordData){
+  if(!wordData || !wordData.range) return null;
+  const r = wordData.range;
+  return [
+    wordData.text,
+    r.startContainer,
+    r.startOffset,
+    r.endContainer,
+    r.endOffset
+  ].join("|");
+}
+
+function closePreview(){
+  if(pinnedPopup) return;
+  hideWordPopup();
+  hoverWordKey = null;
+}
+
+function openPreview(wordData){
+  if(pinnedPopup || !wordData) return;
+
+  const key = makeWordKey(wordData);
+  if(key === hoverWordKey && popup.classList.contains("visible")) return;
+
+  if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
+  hoverWordKey = key;
+  showWordPopup(wordData, false);
+}
+
 editor.addEventListener("mousemove", event => {
   if(pinnedPopup) return;
 
   const wordData = getWordAtPoint(event.clientX, event.clientY);
 
-  if(!wordData){
-    if(hoverTimer) clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(() => {
-      if(!pinnedPopup && !popup.matches(":hover")){
-        hideWordPopup();
-      }
-    }, 80);
-    return;
+  if(wordData){
+    if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
+    openPreview(wordData);
+  } else {
+    if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = setTimeout(closePreview, 120);
   }
-
-  if(hoverWordData &&
-     hoverWordData.text === wordData.text &&
-     hoverWordData.range.startContainer === wordData.range.startContainer &&
-     hoverWordData.range.startOffset === wordData.range.startOffset){
-    return;
-  }
-
-  if(hoverTimer) clearTimeout(hoverTimer);
-  showHoverPopup(wordData);
-});
-
-editor.addEventListener("mouseleave", () => {
-  if(pinnedPopup) return;
-
-  hoverTimer = setTimeout(() => {
-    if(!popup.matches(":hover")){
-      hideWordPopup();
-    }
-  }, 120);
 });
 
 editor.addEventListener("click", event => {
+  // If click is on a word, this is the ONLY action that pins it.
   const wordData = getWordAtPoint(event.clientX, event.clientY);
 
-  // Click on empty space: close everything.
-  if(!wordData){
-    hideWordPopup();
-    hoverWordData = null;
+  if(wordData){
+    // Same currently pinned word -> toggle off.
+    if(
+      pinnedPopup &&
+      currentSelection &&
+      currentSelection.activeElement &&
+      currentSelection.activeElement.contains(event.target)
+    ){
+      hideWordPopup();
+      hoverWordKey = null;
+      return;
+    }
+
+    // Any clicked word becomes the new pinned word.
+    showWordPopup(wordData, true);
+    hoverWordKey = makeWordKey(wordData);
     return;
   }
 
-  // Clicking the currently highlighted word toggles the pinned popup off.
-  if(currentSelection && currentSelection.activeElement &&
-     currentSelection.activeElement.contains(event.target)){
-    hideWordPopup();
-    hoverWordData = null;
-    return;
-  }
-
-  // Clicking another word pins that word's popup.
-  showWordPopup(wordData, true);
-  hoverWordData = wordData;
+  // Empty area of editor -> close.
+  hideWordPopup();
+  hoverWordKey = null;
 });
 
 popup.addEventListener("mouseenter", () => {
-  if(!pinnedPopup){
-    // Keep a hover popup alive while the mouse is over the popup.
-    if(hoverTimer) clearTimeout(hoverTimer);
-  }
+  if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
 });
 
 popup.addEventListener("mouseleave", () => {
+  // Preview closes when mouse leaves the popup.
+  // Pinned popup stays.
   if(!pinnedPopup){
-    hideWordPopup();
+    if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
+    hoverCloseTimer = setTimeout(closePreview, 120);
   }
 });
 
@@ -746,7 +760,7 @@ document.addEventListener("click", event => {
   if(editor.contains(event.target)) return;
 
   hideWordPopup();
-  hoverWordData = null;
+  hoverWordKey = null;
 });
 
 window.addEventListener("resize", positionPopup);
