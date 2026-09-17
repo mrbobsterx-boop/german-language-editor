@@ -38,6 +38,7 @@ button,input{font:inherit}button{cursor:pointer}
 .dictionary-translation{color:#c9c9c9;font-size:15px;line-height:1.4;text-align:right;max-width:52%}
 .dictionary-status{padding:8px 22px;color:#888;font-size:11px;border-bottom:1px solid #2b2b2b}
 .annotation{display:inline;background:rgba(143,179,207,.13);border-bottom:1px solid #6f96b4;border-radius:2px;padding:1px 2px}
+.active-word{background:rgba(73,120,160,.42);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.35)}
 .annotation-note{color:#9eb9cc;font-size:.78em;margin-left:3px;opacity:.95}
 .selection-popup{position:fixed;z-index:1000;width:330px;background:var(--popup);border:1px solid #555;border-radius:8px;box-shadow:0 15px 45px rgba(0,0,0,.45);padding:14px;display:none}
 .selection-popup.visible{display:block}
@@ -406,12 +407,56 @@ function positionPopup(){
   popup.style.top = top + "px";
 }
 
+function clearActiveWord(){
+  document.querySelectorAll(".active-word").forEach(node => {
+    const parent = node.parentNode;
+    if(!parent) return;
+
+    while(node.firstChild){
+      parent.insertBefore(node.firstChild, node);
+    }
+
+    parent.removeChild(node);
+    parent.normalize();
+  });
+}
+
+function highlightWord(wordData){
+  clearActiveWord();
+
+  if(!wordData || !wordData.range) return;
+
+  try{
+    const range = wordData.range.cloneRange();
+    const wrapper = document.createElement("span");
+    wrapper.className = "active-word";
+    wrapper.dataset.activeWord = "true";
+
+    const contents = range.extractContents();
+    wrapper.appendChild(contents);
+    range.insertNode(wrapper);
+
+    // Rebuild the range so the popup/actions still point to the highlighted word.
+    const newRange = document.createRange();
+    newRange.selectNodeContents(wrapper);
+
+    currentSelection = {
+      text: wrapper.textContent,
+      range: newRange,
+      activeElement: wrapper
+    };
+  }catch(error){
+    console.error(error);
+    currentSelection = wordData;
+  }
+}
+
 function showWordPopup(wordData){
   if(!wordData) return;
 
-  currentSelection = wordData;
+  highlightWord(wordData);
 
-  const info = lookupWord(wordData.text);
+  const info = lookupWord(currentSelection.text);
 
   document.getElementById("popupWord").textContent = wordData.text;
 
@@ -450,12 +495,10 @@ function showWordPopup(wordData){
   under the mouse and opens its popup.
 */
 editor.addEventListener("click", event => {
-  // Clicking an existing annotation should still resolve to the word.
+  // Clicking an existing annotation or active word should still resolve to the word.
   const wordData = getWordAtPoint(event.clientX, event.clientY);
 
   if(!wordData){
-    popup.classList.remove("visible");
-    currentSelection = null;
     return;
   }
 
@@ -468,6 +511,7 @@ document.addEventListener("click", event => {
 
   popup.classList.remove("visible");
   currentSelection = null;
+  clearActiveWord();
 });
 
 window.addEventListener("resize", positionPopup);
@@ -508,6 +552,7 @@ function renderDictionary(){
 
 function saveWordToDictionary(){
   if(!currentSelection) return;
+  // The clicked word remains highlighted while the popup is open.
 
   const selectedText = currentSelection.text;
   const info = lookupWord(selectedText);
@@ -584,6 +629,20 @@ function addAnnotation(){
 
     range.insertNode(fragment);
 
+    // Remove the temporary click highlight, if it exists.
+    if(currentSelection && currentSelection.activeElement){
+      const active = currentSelection.activeElement;
+      const parent = active.parentNode;
+
+      if(parent){
+        while(active.firstChild){
+          parent.insertBefore(active.firstChild, active);
+        }
+        parent.removeChild(active);
+        parent.normalize();
+      }
+    }
+
     popup.classList.remove("visible");
     currentSelection = null;
 
@@ -648,6 +707,8 @@ fileInput.addEventListener("change", async () => {
     const text = await file.text();
     const data = JSON.parse(text);
 
+    clearActiveWord();
+
     editor.innerHTML =
       data.originalHtml ||
       data.html ||
@@ -673,6 +734,7 @@ fileInput.addEventListener("change", async () => {
 });
 
 document.getElementById("newBtn").addEventListener("click", () => {
+  clearActiveWord();
   editor.innerHTML = "";
   savedWords = [];
   currentSelection = null;
