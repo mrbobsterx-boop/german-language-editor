@@ -39,6 +39,7 @@ button,input{font:inherit}button{cursor:pointer}
 .dictionary-status{padding:8px 22px;color:#888;font-size:11px;border-bottom:1px solid #2b2b2b}
 .annotation{display:inline;background:rgba(143,179,207,.13);border-bottom:1px solid #6f96b4;border-radius:2px;padding:1px 2px}
 .active-word{background:rgba(73,120,160,.42);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.35)}
+.hover-word{background:rgba(73,120,160,.20);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.20)}
 .annotation-note{color:#9eb9cc;font-size:.78em;margin-left:3px;opacity:.95}
 .selection-popup{position:fixed;z-index:1000;width:330px;background:var(--popup);border:1px solid #555;border-radius:8px;box-shadow:0 15px 45px rgba(0,0,0,.45);padding:14px;display:none}
 .selection-popup.visible{display:block}
@@ -76,7 +77,10 @@ button,input{font:inherit}button{cursor:pointer}
 
 <main class="workspace" id="workspace">
 <section class="column">
-  <div class="column-header"><span>Deutsch</span><small>Оригинал</small></div>
+  <div class="column-header">
+  <span>Deutsch</span>
+  <small id="editorStats">Оригинал · 0 слов · найдено: 0 · не найдено: 0</small>
+</div>
   <div class="editor-wrap">
     <div id="editor" class="editor" contenteditable="true" spellcheck="false"
          data-placeholder="Вставь сюда немецкий текст..."></div>
@@ -152,6 +156,7 @@ const dictionaryList = document.getElementById("dictionaryList");
 const dictionaryStatus = document.getElementById("dictionaryStatus");
 const statusEl = document.getElementById("status");
 const wordCountEl = document.getElementById("wordCount");
+const editorStatsEl = document.getElementById("editorStats");
 const workspace = document.getElementById("workspace");
 const fileInput = document.getElementById("fileInput");
 
@@ -159,6 +164,9 @@ let localDictionary = new Map();
 let savedWords = [];
 let currentSelection = null;
 let selectionJustFinished = false;
+let pinnedPopup = false;
+let hoverWordData = null;
+let hoverTimer = null;
 
 /* ---------- dictionary ---------- */
 
@@ -602,7 +610,14 @@ function highlightWord(wordData){
   }
 }
 
-function showWordPopup(wordData){
+function hideWordPopup(){
+  popup.classList.remove("visible");
+  currentSelection = null;
+  pinnedPopup = false;
+  clearActiveWord();
+}
+
+function showWordPopup(wordData, pin = false){
   if(!wordData) return;
 
   highlightWord(wordData);
@@ -628,41 +643,110 @@ function showWordPopup(wordData){
     info.article;
 
   document.getElementById("annotationInput").value =
-    info.translation.startsWith("Нет точного")
+    info.translation === "Не найдено в словаре"
       ? ""
       : info.translation;
 
+  pinnedPopup = pin;
   popup.classList.add("visible");
 
   requestAnimationFrame(positionPopup);
 }
 
-/*
-  WORD CLICK MODE
-  ---------------
-  There is no text selection anymore.
+function showHoverPopup(wordData){
+  if(pinnedPopup) return;
+  hoverWordData = wordData;
+  showWordPopup(wordData, false);
+}
 
-  A normal left click inside the German editor finds the word
-  under the mouse and opens its popup.
+/*
+  WORD INTERACTION
+  ----------------
+  Hover a word -> temporary popup.
+  Click the word -> popup becomes pinned.
+  Click the same word again -> popup disappears.
+  Click empty editor space -> popup disappears.
+  Move the mouse away from a hovered word -> popup disappears,
+  unless it was pinned.
 */
-editor.addEventListener("click", event => {
-  // Clicking an existing annotation or active word should still resolve to the word.
+editor.addEventListener("mousemove", event => {
+  if(pinnedPopup) return;
+
   const wordData = getWordAtPoint(event.clientX, event.clientY);
 
   if(!wordData){
+    if(hoverTimer) clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => {
+      if(!pinnedPopup && !popup.matches(":hover")){
+        hideWordPopup();
+      }
+    }, 80);
     return;
   }
 
-  showWordPopup(wordData);
+  if(hoverWordData &&
+     hoverWordData.text === wordData.text &&
+     hoverWordData.range.startContainer === wordData.range.startContainer &&
+     hoverWordData.range.startOffset === wordData.range.startOffset){
+    return;
+  }
+
+  if(hoverTimer) clearTimeout(hoverTimer);
+  showHoverPopup(wordData);
+});
+
+editor.addEventListener("mouseleave", () => {
+  if(pinnedPopup) return;
+
+  hoverTimer = setTimeout(() => {
+    if(!popup.matches(":hover")){
+      hideWordPopup();
+    }
+  }, 120);
+});
+
+editor.addEventListener("click", event => {
+  const wordData = getWordAtPoint(event.clientX, event.clientY);
+
+  // Click on empty space: close everything.
+  if(!wordData){
+    hideWordPopup();
+    hoverWordData = null;
+    return;
+  }
+
+  // Clicking the currently highlighted word toggles the pinned popup off.
+  if(currentSelection && currentSelection.activeElement &&
+     currentSelection.activeElement.contains(event.target)){
+    hideWordPopup();
+    hoverWordData = null;
+    return;
+  }
+
+  // Clicking another word pins that word's popup.
+  showWordPopup(wordData, true);
+  hoverWordData = wordData;
+});
+
+popup.addEventListener("mouseenter", () => {
+  if(!pinnedPopup){
+    // Keep a hover popup alive while the mouse is over the popup.
+    if(hoverTimer) clearTimeout(hoverTimer);
+  }
+});
+
+popup.addEventListener("mouseleave", () => {
+  if(!pinnedPopup){
+    hideWordPopup();
+  }
 });
 
 document.addEventListener("click", event => {
   if(popup.contains(event.target)) return;
   if(editor.contains(event.target)) return;
 
-  popup.classList.remove("visible");
-  currentSelection = null;
-  clearActiveWord();
+  hideWordPopup();
+  hoverWordData = null;
 });
 
 window.addEventListener("resize", positionPopup);
@@ -918,18 +1002,38 @@ function escapeHtml(value){
     .replaceAll("'","&#039;");
 }
 
-function updateWordCount(){
+function getTextWords(){
   const text = editor.innerText || "";
-  const words = text.trim()
-    ? text.trim().split(/\s+/).length
-    : 0;
+  return text.match(/[\p{L}\p{N}ÄÖÜäöüßẞ]+(?:[-'][\p{L}\p{N}ÄÖÜäöüßẞ]+)*/gu) || [];
+}
+
+function updateWordCount(){
+  const words = getTextWords();
+  const total = words.length;
+  let found = 0;
+
+  // Count each occurrence, not only unique words.
+  for(const word of words){
+    const info = lookupWord(word);
+    if(info.base !== "—" && info.translation !== "Не найдено в словаре"){
+      found++;
+    }
+  }
+
+  const notFound = total - found;
 
   wordCountEl.textContent =
-    words + " " +
-    (words === 1 ? "слово" : "слов");
+    total + " " +
+    (total === 1 ? "слово" : "слов");
+
+  editorStatsEl.textContent =
+    "Оригинал · " + total +
+    " слов · найдено: " + found +
+    " · не найдено: " + notFound;
 }
 
 editor.addEventListener("input", updateWordCount);
+editor.addEventListener("input", () => setTimeout(updateWordCount, 0));
 
 /* ---------- start ---------- */
 
