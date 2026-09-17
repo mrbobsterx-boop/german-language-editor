@@ -503,36 +503,43 @@ function getWordAtPoint(x, y){
 
   if(!range || !editor.contains(range.startContainer)) return null;
 
-  let node = range.startContainer;
-
-  if(node.nodeType !== Node.TEXT_NODE){
-    return null;
-  }
+  const node = range.startContainer;
+  if(node.nodeType !== Node.TEXT_NODE) return null;
 
   const text = node.textContent || "";
+  if(!text) return null;
+
   let offset = range.startOffset;
+  if(offset >= text.length) offset = text.length - 1;
+  if(offset < 0) return null;
 
-  if(offset === text.length && offset > 0) offset--;
+  // Never treat whitespace/padding as a word.
+  if(!/[\p{L}\p{N}ÄÖÜäöüß'’\-]/u.test(text[offset] || "")) return null;
 
-  // If the click is exactly on whitespace, don't open the popup.
-  if(/\s/u.test(text[offset] || "")) return null;
+  const isWordChar = ch => /[\p{L}\p{N}ÄÖÜäöüß'’\-]/u.test(ch);
 
   let start = offset;
   let end = offset + 1;
 
-  // Word characters: letters, numbers, German umlauts, ß, apostrophe/hyphen.
-  const isWordChar = ch => /[\p{L}\p{N}ÄÖÜäöüß'’\-]/u.test(ch);
-
   while(start > 0 && isWordChar(text[start - 1])) start--;
   while(end < text.length && isWordChar(text[end])) end++;
 
-  const word = text.slice(start, end).trim();
-
+  const word = text.slice(start, end);
   if(!word) return null;
 
   const wordRange = document.createRange();
   wordRange.setStart(node, start);
   wordRange.setEnd(node, end);
+
+  // caretRangeFromPoint() may return the nearest caret even when the mouse
+  // is actually in the gap between words/lines. Verify that the pointer is
+  // physically inside the rendered word before returning it.
+  const rects = Array.from(wordRange.getClientRects());
+  const hit = rects.some(rect =>
+    x >= rect.left && x <= rect.right &&
+    y >= rect.top && y <= rect.bottom
+  );
+  if(!hit) return null;
 
   return {
     text: word,
@@ -677,76 +684,93 @@ function showHoverPopup(wordData){
 }
 /*
   WORD INTERACTION
-  Hover = preview only. Click = pin + highlight.
+
+  1. Hover over a real word -> preview popup only.
+  2. Move away from the word -> preview disappears.
+  3. Click a word -> popup is pinned and the word is highlighted.
+  4. Click the same highlighted word again -> popup closes.
+  5. Click another word -> popup switches to that word and stays pinned.
+  6. Click anywhere outside the editor/popup -> popup closes.
 */
 let hoverWordKey = null;
-let hoverCloseTimer = null;
 
 function makeWordKey(wordData){
   if(!wordData || !wordData.range) return null;
-  const r=wordData.range;
-  return [wordData.text,r.startContainer,r.startOffset,r.endContainer,r.endOffset].join("|");
+  const r = wordData.range;
+  return [
+    wordData.text,
+    r.startContainer,
+    r.startOffset,
+    r.endContainer,
+    r.endOffset
+  ].join("|");
 }
-function closePreview(){
+
+function closeHoverPreview(){
   if(pinnedPopup) return;
   popup.classList.remove("visible");
-  hoverWordKey=null;
+  hoverWordKey = null;
 }
-function openPreview(wordData){
+
+function openHoverPreview(wordData){
   if(pinnedPopup || !wordData) return;
-  const key=makeWordKey(wordData);
-  if(key===hoverWordKey && popup.classList.contains("visible")) return;
-  if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
-  hoverWordKey=key;
+
+  const key = makeWordKey(wordData);
+  if(key === hoverWordKey && popup.classList.contains("visible")) return;
+
+  hoverWordKey = key;
   showHoverPopup(wordData);
 }
 
-editor.addEventListener("mousemove",event=>{
+editor.addEventListener("mousemove", event => {
   if(pinnedPopup) return;
-  const wordData=getWordAtPoint(event.clientX,event.clientY);
+
+  const wordData = getWordAtPoint(event.clientX, event.clientY);
+
   if(wordData){
-    if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
-    openPreview(wordData);
+    openHoverPreview(wordData);
   }else{
-    if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
-    hoverCloseTimer=setTimeout(closePreview,100);
+    // No word under the pointer = no hover popup.
+    closeHoverPreview();
   }
 });
-editor.addEventListener("mouseleave",()=>{
-  if(pinnedPopup) return;
-  if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
-  hoverCloseTimer=setTimeout(closePreview,100);
+
+editor.addEventListener("mouseleave", () => {
+  closeHoverPreview();
 });
-editor.addEventListener("click",event=>{
-  const wordData=getWordAtPoint(event.clientX,event.clientY);
+
+editor.addEventListener("click", event => {
+  const wordData = getWordAtPoint(event.clientX, event.clientY);
+
   if(!wordData){
     hideWordPopup();
-    hoverWordKey=null;
+    hoverWordKey = null;
     return;
   }
-  if(pinnedPopup && currentSelection && currentSelection.activeElement &&
-     currentSelection.activeElement.contains(event.target)){
+
+  // Clicking the already highlighted word toggles the pinned popup off.
+  if(
+    pinnedPopup &&
+    currentSelection &&
+    currentSelection.activeElement &&
+    currentSelection.activeElement.contains(event.target)
+  ){
     hideWordPopup();
-    hoverWordKey=null;
+    hoverWordKey = null;
     return;
   }
-  showWordPopup(wordData,true);
-  hoverWordKey=makeWordKey(wordData);
+
+  // A click on a word pins that exact word.
+  showWordPopup(wordData, true);
+  hoverWordKey = makeWordKey(wordData);
 });
-popup.addEventListener("mouseenter",()=>{
-  if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
-});
-popup.addEventListener("mouseleave",()=>{
-  if(!pinnedPopup){
-    if(hoverCloseTimer) clearTimeout(hoverCloseTimer);
-    hoverCloseTimer=setTimeout(closePreview,100);
-  }
-});
-document.addEventListener("click",event=>{
+
+document.addEventListener("click", event => {
   if(popup.contains(event.target)) return;
   if(editor.contains(event.target)) return;
+
   hideWordPopup();
-  hoverWordKey=null;
+  hoverWordKey = null;
 });
 
 window.addEventListener("resize", positionPopup);
