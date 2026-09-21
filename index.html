@@ -72,13 +72,17 @@ button:active{transform:translateY(1px)}
 .filter-chip{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
 .filter-chip:hover{background:#262b31;color:var(--text)}
 .filter-chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-strong)}
+.dictionary-half{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-bottom:1px solid var(--line)}
+.practice-half{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.practice-editor-wrap{flex:1;min-height:0;overflow:auto}
+.practice-editor{width:100%;min-height:100%;padding:18px 20px 60px;outline:none;white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.7;color:var(--text)}
+.practice-editor:empty:before{content:attr(data-placeholder);color:var(--muted)}
+.practice-match{background:rgba(91,141,239,.22);border-radius:3px;padding:1px 2px;color:var(--accent-strong);font-weight:600}
 .dictionary-delete{flex:0 0 auto;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:var(--radius-sm);padding:5px 9px;font-size:11px}
 .dictionary-delete:hover{background:#33262a;color:var(--red);border-color:rgba(224,133,127,.4)}
 .annotation{display:inline;background:var(--accent-dim);border-bottom:1px solid var(--accent);border-radius:2px;padding:1px 2px}
 .active-word{background:rgba(91,141,239,.35);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.4)}
 .hover-word{background:rgba(91,141,239,.18);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.2)}
-.missing-word{border-bottom:2px dotted var(--red);cursor:pointer}
-.missing-word:hover{background:rgba(224,133,127,.1)}
 .compound-word{border-bottom:2px dotted var(--accent-strong);cursor:pointer}
 .compound-word:hover{background:rgba(91,141,239,.1)}
 .annotation-note{color:var(--accent-strong);font-size:.78em;margin-left:3px;opacity:.9}
@@ -241,19 +245,32 @@ button:active{transform:translateY(1px)}
 </section>
 
 <section class="column translation-column" id="translationColumn">
-  <div class="column-header"><span>Слова</span><small>Память для обучения</small></div>
-  <div class="dictionary-filters" id="dictionaryFilters">
-    <button class="filter-chip active" type="button" data-category="noun">Существительные</button>
-    <button class="filter-chip active" type="button" data-category="verb">Глаголы</button>
-    <button class="filter-chip active" type="button" data-category="adjective">Прилагательные</button>
-    <button class="filter-chip active" type="button" data-category="pronoun">Местоимения</button>
-    <button class="filter-chip active" type="button" data-category="adverb">Наречия</button>
-    <button class="filter-chip active" type="button" data-category="function">Служебные слова</button>
-    <button class="filter-chip active" type="button" data-category="other">Другое</button>
+  <div class="dictionary-half">
+    <div class="column-header"><span>Слова</span><small>Память для обучения</small></div>
+    <div class="dictionary-filters" id="dictionaryFilters">
+      <button class="filter-chip active" type="button" data-category="noun">Существительные</button>
+      <button class="filter-chip active" type="button" data-category="verb">Глаголы</button>
+      <button class="filter-chip active" type="button" data-category="adjective">Прилагательные</button>
+      <button class="filter-chip active" type="button" data-category="pronoun">Местоимения</button>
+      <button class="filter-chip active" type="button" data-category="adverb">Наречия</button>
+      <button class="filter-chip active" type="button" data-category="function">Служебные слова</button>
+      <button class="filter-chip active" type="button" data-category="other">Другое</button>
+    </div>
+    <div id="dictionaryStatus" class="dictionary-status">Загрузка словаря...</div>
+    <div id="dictionaryList" class="dictionary-list">
+      <div class="dictionary-empty">Сохранённые слова появятся здесь.</div>
+    </div>
   </div>
-  <div id="dictionaryStatus" class="dictionary-status">Загрузка словаря...</div>
-  <div id="dictionaryList" class="dictionary-list">
-    <div class="dictionary-empty">Сохранённые слова появятся здесь.</div>
+
+  <div class="practice-half">
+    <div class="column-header">
+      <span>Мой перевод</span>
+      <small>Слова, найденные в тексте слева, подсвечиваются</small>
+    </div>
+    <div class="practice-editor-wrap">
+      <div id="practiceEditor" class="practice-editor" contenteditable="true" spellcheck="false"
+           data-placeholder="Печатай здесь свой перевод на русском..."></div>
+    </div>
   </div>
 </section>
 </main>
@@ -2917,8 +2934,8 @@ function pointInsideRects(rects, x, y){
   return false;
 }
 
-function getEditorTextNodes(){
-  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT, {
+function getEditorTextNodes(root = editor){
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node){
       const parent = node.parentElement;
       if(!parent) return NodeFilter.FILTER_REJECT;
@@ -2933,7 +2950,7 @@ function getEditorTextNodes(){
 }
 
 function unwrapMissingWords(){
-  editor.querySelectorAll("span.missing-word, span.compound-word").forEach(span => {
+  editor.querySelectorAll("span.compound-word").forEach(span => {
     const parent = span.parentNode;
     if(!parent) return;
     while(span.firstChild) parent.insertBefore(span.firstChild, span);
@@ -2963,13 +2980,7 @@ function refreshMissingWordMarks(){
       if(start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, start)));
 
       const info = lookupWord(word);
-      if(info.translation === "Не найдено в словаре"){
-        const mark = document.createElement("span");
-        mark.className = "missing-word";
-        mark.textContent = word;
-        frag.appendChild(mark);
-        changed = true;
-      }else if(info.isCompound){
+      if(info.isCompound){
         const mark = document.createElement("span");
         mark.className = "compound-word";
         mark.textContent = word;
@@ -2988,6 +2999,90 @@ function refreshMissingWordMarks(){
     }
   }
 }
+
+/* ---------- translation practice panel ----------
+   The user types their own Russian translation attempt here. Any word
+   that matches a translation of a German word currently in the editor
+   gets highlighted, as a quick self-check ("did I use the right word?").
+*/
+const practiceEditor = document.getElementById("practiceEditor");
+
+function getGermanEditorKnownRussianWords(){
+  const known = new Set();
+  for(const word of getTextWords()){
+    const info = lookupWord(word);
+    if(info.translation === "Не найдено в словаре") continue;
+
+    // info.translation can be "a; b; c" (synonyms) and/or "a + b" (this
+    // app's own compound-word join) — split on both, then pull out the
+    // individual Russian words from each resulting phrase.
+    for(const piece of info.translation.split(/[;+]/)){
+      const matches = piece.match(/[\p{L}]+/gu) || [];
+      for(const w of matches){
+        const norm = w.toLowerCase();
+        if(norm.length >= 2) known.add(norm);
+      }
+    }
+  }
+  return known;
+}
+
+function unwrapPracticeMatches(){
+  practiceEditor.querySelectorAll("span.practice-match").forEach(span => {
+    const parent = span.parentNode;
+    if(!parent) return;
+    while(span.firstChild) parent.insertBefore(span.firstChild, span);
+    parent.removeChild(span);
+  });
+  practiceEditor.normalize();
+}
+
+function refreshPracticeHighlights(){
+  unwrapPracticeMatches();
+  if(!practiceEditor.innerText.trim()) return;
+
+  const knownWords = getGermanEditorKnownRussianWords();
+  const nodes = getEditorTextNodes(practiceEditor);
+
+  for(const node of nodes){
+    const text = node.nodeValue;
+    const regex = /[\p{L}]+/gu;
+    const matches = [...text.matchAll(regex)];
+    if(!matches.length) continue;
+
+    const frag = document.createDocumentFragment();
+    let cursor = 0;
+    let changed = false;
+
+    for(const match of matches){
+      const word = match[0];
+      const start = match.index;
+      if(start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, start)));
+
+      if(knownWords.has(word.toLowerCase())){
+        const mark = document.createElement("span");
+        mark.className = "practice-match";
+        mark.textContent = word;
+        frag.appendChild(mark);
+        changed = true;
+      }else{
+        frag.appendChild(document.createTextNode(word));
+      }
+      cursor = start + word.length;
+    }
+
+    if(cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+    if(changed) node.parentNode.replaceChild(frag, node);
+  }
+}
+
+practiceEditor.addEventListener("input", () => {
+  setTimeout(() => {
+    const caretOffset = getCaretOffset(practiceEditor);
+    refreshPracticeHighlights();
+    setCaretOffset(practiceEditor, caretOffset);
+  }, 0);
+});
 
 function updateWordCount(){
   const words = getTextWords();
@@ -3054,7 +3149,7 @@ function setCaretOffset(root, offset){
 
 editor.addEventListener("input", () => {
   setTimeout(() => {
-    // refreshMissingWordMarks() rebuilds text nodes to (un)wrap missing
+    // refreshMissingWordMarks() rebuilds text nodes to (un)wrap compound
     // words, which drops the browser's caret. Restore it by character
     // offset so typing doesn't scramble the cursor position.
     const caretOffset = getCaretOffset(editor);
@@ -3062,6 +3157,7 @@ editor.addEventListener("input", () => {
     refreshMissingWordMarks();
     updateWordCount();
     setCaretOffset(editor, caretOffset);
+    refreshPracticeHighlights();
   }, 0);
 });
 
