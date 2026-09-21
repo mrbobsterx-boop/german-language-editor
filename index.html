@@ -79,6 +79,8 @@ button:active{transform:translateY(1px)}
 .hover-word{background:rgba(91,141,239,.18);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.2)}
 .missing-word{border-bottom:2px dotted var(--red);cursor:pointer}
 .missing-word:hover{background:rgba(224,133,127,.1)}
+.compound-word{border-bottom:2px dotted var(--accent-strong);cursor:pointer}
+.compound-word:hover{background:rgba(91,141,239,.1)}
 .annotation-note{color:var(--accent-strong);font-size:.78em;margin-left:3px;opacity:.9}
 .selection-popup{position:fixed;z-index:1000;width:min(330px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:16px;display:none}
 .selection-popup.visible{display:block}
@@ -1412,9 +1414,121 @@ function morphologyCandidates(word){
   return uniqueStrings(out);
 }
 
+/*
+  Articles are function words: they carry no dictionary meaning of their
+  own and shouldn't ever be flagged as "unknown word", but a short label
+  is still useful if someone clicks on one.
+*/
+const GERMAN_ARTICLES = new Map([
+  ["der", "определённый артикль (м.р. им.п. / ж.р. род./дат.п. / мн.ч. род.п.)"],
+  ["die", "определённый артикль (ж.р. / мн.ч.)"],
+  ["das", "определённый артикль (ср.р.)"],
+  ["den", "определённый артикль (м.р. вин.п. / мн.ч. дат.п.)"],
+  ["dem", "определённый артикль (м.р./ср.р. дат.п.)"],
+  ["des", "определённый артикль (м.р./ср.р. род.п.)"],
+  ["ein", "неопределённый артикль (м.р./ср.р. им.п.)"],
+  ["eine", "неопределённый артикль (ж.р.)"],
+  ["einen", "неопределённый артикль (м.р. вин.п.)"],
+  ["einem", "неопределённый артикль (м.р./ср.р. дат.п.)"],
+  ["einer", "неопределённый артикль (ж.р. род./дат.п.)"],
+  ["eines", "неопределённый артикль (м.р./ср.р. род.п.)"]
+]);
+
 function lookupDirect(word){
   const key = normalizeWord(word);
   return learningDictionary.get(key) || customDictionary.get(key) || localDictionary.get(key);
+}
+
+/*
+  German freely glues nouns together (Komposita): Wettbewerbsfähigkeit =
+  Wettbewerb + s + Fähigkeit. FreeDict can't list every combination, so
+  before giving up we try splitting the word into 2-3 components that are
+  each already in the dictionary (allowing for a linking "s"/"n"/"e"
+  between them, the usual Fugenlaut).
+*/
+const FUGEN_SUFFIXES = ["es", "en", "s", "n", "e"];
+const COMPOUND_MIN_PART_LENGTH = 3;
+const COMPOUND_MIN_WORD_LENGTH = 7;
+
+/*
+  A conservative subset of morphologyCandidates() for compound parts: only
+  plain noun/adjective case-ending stripping. Skipping the verb-Präteritum
+  guess (e.g. "rechte" -> "rechen", treating it like "machte" -> "machen")
+  matters here — on an arbitrary substring it too easily lands on an
+  unrelated real word ("Rechen" = rake) ahead of the correct one ("Recht"
+  = right/law), which would otherwise win by generating candidates first.
+*/
+function compoundPartCandidates(word){
+  const w = word.toLowerCase();
+  if(!w) return [];
+
+  const out = [];
+  const add = v => { if(v && v !== w && !out.includes(v)) out.push(v); };
+
+  const suffixes = [
+    ["ern",""],["en",""],["er",""],["es",""],["em",""],["e",""],["n",""],["s",""]
+  ];
+  for(const [suffix, repl] of suffixes){
+    if(w.length > suffix.length + COMPOUND_MIN_PART_LENGTH - 1 && w.endsWith(suffix)){
+      const stem = w.slice(0, -suffix.length) + repl;
+      add(stem);
+      for(const u of umlautBack(stem)) add(u);
+    }
+  }
+  for(const u of umlautBack(w)) add(u);
+
+  return out;
+}
+
+function lookupComponentWord(part){
+  if(!part || part.length < COMPOUND_MIN_PART_LENGTH) return null;
+  const direct = lookupDirect(part);
+  if(direct) return direct;
+
+  for(const candidate of compoundPartCandidates(part)){
+    const entry = lookupDirect(candidate) || lookupDirect(preserveCase(part, candidate));
+    if(entry) return entry;
+  }
+  return null;
+}
+
+function trySplitIntoParts(str, partsLeft){
+  if(partsLeft <= 1){
+    const entry = lookupComponentWord(str);
+    // The final (rightmost) part of a German compound is virtually always
+    // a noun — it's the "head" that gives the whole word its gender. This
+    // also rejects a lot of accidental prefix+suffix coincidences (e.g.
+    // "wachsenden" as "wach" + the verb "senden").
+    if(entry && /^noun\b/i.test(entry.grammar || "")) return [{text: str, entry}];
+    return null;
+  }
+
+  for(let i = COMPOUND_MIN_PART_LENGTH; i <= str.length - COMPOUND_MIN_PART_LENGTH; i++){
+    const left = str.slice(0, i);
+    const right = str.slice(i);
+    const leftVariants = [left];
+
+    for(const suffix of FUGEN_SUFFIXES){
+      if(left.endsWith(suffix) && left.length - suffix.length >= COMPOUND_MIN_PART_LENGTH){
+        leftVariants.push(left.slice(0, -suffix.length));
+      }
+    }
+
+    for(const variant of leftVariants){
+      const leftEntry = lookupComponentWord(variant);
+      if(!leftEntry) continue;
+      const rest = trySplitIntoParts(right, partsLeft - 1);
+      if(rest) return [{text: variant, entry: leftEntry}, ...rest];
+    }
+  }
+
+  return null;
+}
+
+function splitCompoundWord(word){
+  const w = word.toLowerCase();
+  if(w.length < COMPOUND_MIN_WORD_LENGTH) return null;
+  return trySplitIntoParts(w, 2) || trySplitIntoParts(w, 3);
 }
 
 function buildWordInfo(selectedText, entry){
@@ -1433,11 +1547,47 @@ function buildWordInfo(selectedText, entry){
   };
 }
 
+function buildCompoundWordInfo(selectedText, parts){
+  const translation = parts
+    .map(part => normalizeTranslation(part.entry.translation))
+    .filter(Boolean)
+    .join(" + ");
+  const base = parts.map(part => part.entry.word || part.text).join(" + ");
+
+  // A German compound noun's gender/article is inherited from its last
+  // (rightmost) component — the "head" of the compound.
+  const lastGrammar = parts[parts.length - 1].entry.grammar || "";
+  let article = "—";
+  if(/noun\s*,\s*male/i.test(lastGrammar)) article = "der";
+  else if(/noun\s*,\s*female/i.test(lastGrammar)) article = "die";
+  else if(/noun\s*,\s*neutral/i.test(lastGrammar)) article = "das";
+
+  return {
+    word: selectedText,
+    translation,
+    base,
+    article,
+    grammar: "составное слово",
+    isCompound: true
+  };
+}
+
 function lookupWord(selectedText){
   const clean = normalizeWord(selectedText);
 
   if(!clean){
     return {word:selectedText,translation:"—",base:"—",article:"—",grammar:""};
+  }
+
+  // 0. Articles are always "known" — never flagged as missing vocabulary.
+  if(GERMAN_ARTICLES.has(clean)){
+    return {
+      word: selectedText,
+      translation: GERMAN_ARTICLES.get(clean),
+      base: selectedText,
+      article: "—",
+      grammar: "article"
+    };
   }
 
   // 1. Exact FreeDict match.
@@ -1459,6 +1609,10 @@ function lookupWord(selectedText){
     const entry = lookupDirect(withoutPunctuation);
     if(entry) return buildWordInfo(selectedText, entry);
   }
+
+  // 4. Compound word (Komposita): split into known parts as a last resort.
+  const compoundParts = splitCompoundWord(clean);
+  if(compoundParts) return buildCompoundWordInfo(selectedText, compoundParts);
 
   return {
     word:selectedText,
@@ -2779,7 +2933,7 @@ function getEditorTextNodes(){
 }
 
 function unwrapMissingWords(){
-  editor.querySelectorAll("span.missing-word").forEach(span => {
+  editor.querySelectorAll("span.missing-word, span.compound-word").forEach(span => {
     const parent = span.parentNode;
     if(!parent) return;
     while(span.firstChild) parent.insertBefore(span.firstChild, span);
@@ -2808,14 +2962,21 @@ function refreshMissingWordMarks(){
       const start = match.index;
       if(start > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, start)));
 
-      if(isFoundWord(word)){
-        frag.appendChild(document.createTextNode(word));
-      }else{
+      const info = lookupWord(word);
+      if(info.translation === "Не найдено в словаре"){
         const mark = document.createElement("span");
         mark.className = "missing-word";
         mark.textContent = word;
         frag.appendChild(mark);
         changed = true;
+      }else if(info.isCompound){
+        const mark = document.createElement("span");
+        mark.className = "compound-word";
+        mark.textContent = word;
+        frag.appendChild(mark);
+        changed = true;
+      }else{
+        frag.appendChild(document.createTextNode(word));
       }
       cursor = start + word.length;
     }
