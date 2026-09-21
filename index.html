@@ -2,8 +2,16 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>German Language Editor</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#16181b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DE Editor">
 <style>
 :root{
   --bg:#16181b;--bg-soft:#1b1e22;--panel:#1c1f23;--panel-2:#20242a;
@@ -15,14 +23,14 @@
   --shadow-sm:0 2px 8px rgba(0,0,0,.25);--shadow-lg:0 20px 50px rgba(0,0,0,.4);
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
-button,input{font:inherit}
-button{cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
+button,input,textarea{font:inherit}
+button{cursor:pointer;touch-action:manipulation;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease}
 button:active{transform:translateY(1px)}
-.app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
-.topbar{min-height:64px;padding:10px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--bg-soft)}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{min-height:64px;padding:max(10px,env(safe-area-inset-top)) 24px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--bg-soft)}
 .brand{font-size:18px;font-weight:700;color:var(--heading);letter-spacing:-.01em;display:flex;align-items:center;gap:9px;white-space:nowrap}
 .brand::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -72,7 +80,7 @@ button:active{transform:translateY(1px)}
 .missing-word{border-bottom:2px dotted var(--red);cursor:pointer}
 .missing-word:hover{background:rgba(224,133,127,.1)}
 .annotation-note{color:var(--accent-strong);font-size:.78em;margin-left:3px;opacity:.9}
-.selection-popup{position:fixed;z-index:1000;width:330px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:16px;display:none}
+.selection-popup{position:fixed;z-index:1000;width:min(330px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:16px;display:none}
 .selection-popup.visible{display:block}
 .popup-word{font-size:19px;font-weight:700;color:var(--heading);margin-bottom:3px}
 .popup-form{color:var(--accent-strong);font-size:13px;margin-bottom:12px}
@@ -80,7 +88,7 @@ button:active{transform:translateY(1px)}
 .popup-label{color:var(--muted)}.popup-value{color:var(--text-dim)}
 .popup-actions{display:flex;gap:8px;margin-top:14px}
 .popup-actions .btn{flex:1;font-size:12px;padding:8px 8px}
-.popup-input{width:100%;margin-top:10px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 10px;outline:none;font-size:13px}
+.popup-input{width:100%;margin-top:10px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 10px;outline:none;font-size:16px}
 .popup-input:focus{border-color:var(--accent)}
 .statusbar{height:36px;border-top:1px solid var(--line);padding:0 18px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px;background:var(--bg-soft)}
 .statusbar .saved{color:var(--green)}
@@ -150,7 +158,7 @@ button:active{transform:translateY(1px)}
 .grammar-empty{color:var(--muted);padding:26px;font-size:13px}
 .sentence-analyzer{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;margin-bottom:24px}
 .sentence-analyzer-body{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-top:12px}
-.sentence-textarea{flex:1;min-width:240px;min-height:64px;resize:vertical;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;font-family:inherit;line-height:1.5}
+.sentence-textarea{flex:1;min-width:240px;min-height:64px;resize:vertical;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;font-size:16px;font-family:inherit;line-height:1.5}
 .sentence-textarea:focus{outline:none;border-color:var(--accent)}
 .sentence-results{margin-top:16px;display:flex;flex-direction:column;gap:10px}
 .sentence-result-item{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--radius);padding:12px 14px;cursor:pointer}
@@ -161,14 +169,33 @@ button:active{transform:translateY(1px)}
 .sentence-empty{color:var(--muted);font-size:13px;padding:4px 2px;line-height:1.6}
 .sentence-grammar-btn{position:fixed;z-index:1500;display:none;background:var(--accent);color:#10151c;border:none;border-radius:999px;padding:9px 16px;font-size:12px;font-weight:600;box-shadow:var(--shadow-lg)}
 .sentence-grammar-btn.visible{display:inline-flex}
+.mobile-menu-btn{display:none}
+.mobile-view-switch{display:none}
+.mobile-menu-list{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.bottom-nav{display:none}
+.bottom-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px 6px;background:transparent;border:none;color:var(--muted);font-size:11px;font-weight:500}
+.bottom-nav-btn svg{width:22px;height:22px}
+.bottom-nav-btn.active{color:var(--accent-strong)}
 @media(max-width:800px){
   .grammar-main{grid-template-columns:1fr}
   .grammar-list{max-height:none}
-  .workspace{grid-template-columns:1fr}.translation-column{display:none}
+  .workspace{grid-template-columns:1fr}
+  .workspace:not(.single) .translation-column{display:none}
+  .workspace.single .column:not(.translation-column){display:none}
+  .workspace.single .translation-column{display:flex}
   .learning-main{grid-template-columns:1fr}
   .learning-view{padding:22px 18px 60px}
-  .topbar{padding:10px 12px}.editor{padding:22px 18px 100px}
+  .topbar{padding:max(10px,env(safe-area-inset-top)) 12px 10px}
+  .editor{padding:22px 18px 100px}
   .study-toolbar{flex-wrap:wrap}
+
+  .toolbar > *:not(.mobile-menu-btn){display:none}
+  .mobile-menu-btn{display:inline-flex;margin-left:auto}
+  .mobile-view-switch.active-tab{display:inline-flex;margin:10px 12px 0}
+
+  #editorTabBtn,#learningTabBtn,#grammarTabBtn{display:none}
+  .statusbar{display:none}
+  .bottom-nav{display:flex;flex:none;border-top:1px solid var(--line);background:var(--bg-soft);padding-bottom:env(safe-area-inset-bottom)}
 }
 </style>
 </head>
@@ -190,8 +217,14 @@ button:active{transform:translateY(1px)}
       <input type="checkbox" id="dictionaryToggle" checked>
       Слова для обучения
     </label>
+    <button class="btn mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Меню">⋯</button>
   </div>
 </header>
+
+<div class="segmented mobile-view-switch active-tab" id="mobileViewSwitch">
+  <button class="segmented-btn active" type="button" data-view="text">Текст</button>
+  <button class="segmented-btn" type="button" data-view="words">Слова</button>
+</div>
 
 <main class="workspace" id="workspace">
 <section class="column">
@@ -318,6 +351,21 @@ button:active{transform:translateY(1px)}
   <span id="status">Загрузка словаря...</span>
   <span id="wordCount">0 слов</span>
 </footer>
+
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bottom-nav-btn active" type="button" data-tab="editor">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    <span>Редактор</span>
+  </button>
+  <button class="bottom-nav-btn" type="button" data-tab="learning">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="14" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/></svg>
+    <span>Обучение</span>
+  </button>
+  <button class="bottom-nav-btn" type="button" data-tab="grammar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>Грамматика</span>
+  </button>
+</nav>
 </div>
 
 <input type="file" id="fileInput" accept=".json,.txt">
@@ -355,6 +403,20 @@ button:active{transform:translateY(1px)}
 </div>
 
 <button class="sentence-grammar-btn" id="sentenceGrammarBtn" type="button">Объяснить грамматику →</button>
+
+<div class="modal-overlay" id="mobileMenuOverlay">
+  <div class="modal">
+    <div class="modal-title">Меню</div>
+    <div class="mobile-menu-list">
+      <button class="btn" id="mobileOpenBtn" type="button">Открыть документ</button>
+      <button class="btn primary" id="mobileSaveBtn" type="button">Сохранить документ</button>
+      <button class="btn" id="mobileMemoryBtn" type="button">Резервная копия в файл</button>
+      <button class="btn" id="mobileGithubSyncBtn" type="button">GitHub-синхронизация</button>
+    </div>
+    <div class="modal-hint" id="mobileMenuStatus"></div>
+    <button class="btn" id="mobileMenuCloseBtn" type="button" style="width:100%;margin-top:14px">Закрыть</button>
+  </div>
+</div>
 
 <div class="modal-overlay" id="githubModalOverlay">
   <div class="modal">
@@ -2250,12 +2312,14 @@ function openLearningTab(){
   setCardFlipped(false);
   setLearningSubTab("cards");
   renderLearningTab();
+  syncBottomNav("learning");
 }
 
 function openEditorTab(){
   hideAllTabs();
   workspace.style.display = "grid";
   editorTabBtn.classList.add("active");
+  syncBottomNav("editor");
 }
 
 function openGrammarTab(){
@@ -2265,6 +2329,7 @@ function openGrammarTab(){
   renderGrammarLevels();
   renderGrammarRuleList();
   renderGrammarDetail();
+  syncBottomNav("grammar");
 }
 
 editorTabBtn.addEventListener("click", openEditorTab);
@@ -2589,14 +2654,86 @@ fileInput.addEventListener("change", async () => {
   fileInput.value = "";
 });
 
-document
-  .getElementById("dictionaryToggle")
-  .addEventListener("change", event => {
-    workspace.classList.toggle(
-      "single",
-      !event.target.checked
-    );
+const dictionaryToggle = document.getElementById("dictionaryToggle");
+const mobileViewSwitchButtons = document.querySelectorAll("#mobileViewSwitch .segmented-btn");
+
+function setWorkspaceSingle(single){
+  workspace.classList.toggle("single", single);
+  dictionaryToggle.checked = !single;
+  mobileViewSwitchButtons.forEach(btn => {
+    btn.classList.toggle("active", (btn.dataset.view === "words") === single);
   });
+}
+
+dictionaryToggle.addEventListener("change", event => {
+  setWorkspaceSingle(!event.target.checked);
+});
+
+mobileViewSwitchButtons.forEach(btn => {
+  btn.addEventListener("click", () => setWorkspaceSingle(btn.dataset.view === "words"));
+});
+
+/* ---------- mobile bottom navigation + overflow menu ---------- */
+
+const mobileViewSwitchEl = document.getElementById("mobileViewSwitch");
+
+function syncBottomNav(tab){
+  document.querySelectorAll(".bottom-nav-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  });
+  mobileViewSwitchEl.classList.toggle("active-tab", tab === "editor");
+}
+
+document.querySelectorAll(".bottom-nav-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    if(tab === "editor") openEditorTab();
+    else if(tab === "learning") openLearningTab();
+    else if(tab === "grammar") openGrammarTab();
+  });
+});
+
+const mobileMenuOverlay = document.getElementById("mobileMenuOverlay");
+
+function openMobileMenu(){
+  document.getElementById("mobileMenuStatus").innerHTML =
+    escapeHtml(document.getElementById("autosaveBadge").textContent) + "<br>" +
+    escapeHtml(document.getElementById("githubSyncBadge").textContent);
+  mobileMenuOverlay.classList.add("visible");
+}
+
+function closeMobileMenu(){
+  mobileMenuOverlay.classList.remove("visible");
+}
+
+document.getElementById("mobileMenuBtn").addEventListener("click", openMobileMenu);
+document.getElementById("mobileMenuCloseBtn").addEventListener("click", closeMobileMenu);
+mobileMenuOverlay.addEventListener("click", event => {
+  if(event.target === mobileMenuOverlay) closeMobileMenu();
+});
+
+document.getElementById("mobileOpenBtn").addEventListener("click", () => {
+  closeMobileMenu();
+  document.getElementById("openBtn").click();
+});
+document.getElementById("mobileSaveBtn").addEventListener("click", () => {
+  closeMobileMenu();
+  document.getElementById("saveBtn").click();
+});
+document.getElementById("mobileMemoryBtn").addEventListener("click", () => {
+  closeMobileMenu();
+  document.getElementById("memoryBtn").click();
+});
+document.getElementById("mobileGithubSyncBtn").addEventListener("click", () => {
+  closeMobileMenu();
+  document.getElementById("githubSyncBtn").click();
+});
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(error => console.error(error));
+  });
+}
 
 /* ---------- helpers ---------- */
 
