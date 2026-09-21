@@ -356,6 +356,366 @@
         {"de": "Es sei denn, er kommt doch noch.", "ru": "Разве что он всё же придёт."},
         {"de": "Wäre dem so, hätten wir gewonnen.", "ru": "Будь оно так, мы бы выиграли."}
       ]
+    },
+    {
+      "id": "a1-personalpronomen",
+      "level": "A1",
+      "category": "Местоимения",
+      "title": "Personalpronomen — личные местоимения",
+      "explanation": "Личное местоимение показывает, кто выполняет действие, и определяет окончание глагола: ich, du, er/sie/es, wir, ihr, sie/Sie. Es используется для среднего рода и в безличных оборотах.",
+      "examples": [
+        {"de": "ich, du, er, sie, es", "ru": "я, ты, он, она, оно"},
+        {"de": "wir, ihr, sie", "ru": "мы, вы, они"},
+        {"de": "Sie sprechen Deutsch.", "ru": "Вы говорите по-немецки (вежливая форма)."}
+      ]
+    },
+    {
+      "id": "a1-possessivartikel",
+      "level": "A1",
+      "category": "Местоимения",
+      "title": "Possessivartikel — притяжательные местоимения",
+      "explanation": "Mein, dein, sein, ihr, unser, euer, ihr/Ihr указывают на принадлежность и согласуются в роде и числе с существительным, как неопределённый артикль.",
+      "examples": [
+        {"de": "mein Vater, meine Mutter, mein Kind", "ru": "мой отец, моя мать, моё дитя"},
+        {"de": "dein Buch", "ru": "твоя книга"},
+        {"de": "unsere Wohnung", "ru": "наша квартира"}
+      ]
+    },
+    {
+      "id": "a1-plural",
+      "level": "A1",
+      "category": "Существительные",
+      "title": "Pluralbildung — множественное число",
+      "explanation": "У немецких существительных нет единого правила множественного числа: окончание может быть -e, -er, -en, -n, -s или отсутствовать, часто с умлаутом. Форму обычно нужно запоминать вместе со словом.",
+      "examples": [
+        {"de": "der Tisch — die Tische", "ru": "стол — столы"},
+        {"de": "das Kind — die Kinder", "ru": "ребёнок — дети"},
+        {"de": "die Frau — die Frauen", "ru": "женщина — женщины"}
+      ]
+    },
+    {
+      "id": "a1-akkusativ",
+      "level": "A1",
+      "category": "Падежи",
+      "title": "Akkusativ — винительный падеж",
+      "explanation": "Akkusativ используется для прямого дополнения (вопрос «кого? что?»). Меняется только артикль мужского рода: der → den, ein → einen; die, das и множественное число не меняются.",
+      "examples": [
+        {"de": "Ich sehe den Mann.", "ru": "Я вижу мужчину."},
+        {"de": "Ich kaufe einen Apfel.", "ru": "Я покупаю яблоко."},
+        {"de": "Sie liest das Buch.", "ru": "Она читает книгу."}
+      ]
+    },
+    {
+      "id": "a1-trennbare-verben",
+      "level": "A1",
+      "category": "Глаголы",
+      "title": "Trennbare Verben — отделяемые приставки",
+      "explanation": "У глаголов с отделяемой приставкой (auf-, an-, ein-, mit-, aus- и др.) приставка в главном предложении отделяется и уходит в конец, а в Perfekt ge- вставляется между приставкой и корнем.",
+      "examples": [
+        {"de": "Ich stehe um sieben Uhr auf.", "ru": "Я встаю в семь часов."},
+        {"de": "Sie kauft im Supermarkt ein.", "ru": "Она делает покупки в супермаркете."},
+        {"de": "Ich bin um sieben aufgestanden.", "ru": "Я встал(а) в семь (Perfekt)."}
+      ]
+    },
+    {
+      "id": "a1-imperativ",
+      "level": "A1",
+      "category": "Глаголы",
+      "title": "Imperativ — повелительное наклонение",
+      "explanation": "Форма для du теряет окончание -st (иногда добавляется -e), форма для ihr совпадает с обычной формой на -t, вежливая форма Sie ставит глагол перед Sie, как в вопросе.",
+      "examples": [
+        {"de": "Komm bitte her!", "ru": "Подойди, пожалуйста!"},
+        {"de": "Kommt bitte her!", "ru": "Подойдите, пожалуйста! (к нескольким людям)"},
+        {"de": "Kommen Sie bitte herein!", "ru": "Проходите, пожалуйста! (вежливо)"}
+      ]
+    },
+    {
+      "id": "a2-perfekt-trennbar",
+      "level": "A2",
+      "category": "Глаголы",
+      "title": "Perfekt отделяемых глаголов",
+      "explanation": "В Partizip II отделяемых глаголов приставка ge- вставляется между отделяемой приставкой и основой глагола: auf + ge + standen → aufgestanden.",
+      "examples": [
+        {"de": "Ich habe eingekauft.", "ru": "Я сделал(а) покупки."},
+        {"de": "Er ist angekommen.", "ru": "Он прибыл."},
+        {"de": "Wir haben ferngesehen.", "ru": "Мы смотрели телевизор."}
+      ]
+    },
+    {
+      "id": "a2-verben-mit-praepositionen",
+      "level": "A2",
+      "category": "Глаголы",
+      "title": "Глаголы с фиксированными предлогами",
+      "explanation": "Многие немецкие глаголы требуют определённого предлога, который нужно запоминать вместе с глаголом: warten auf (ждать), sich freuen über/auf (радоваться), denken an (думать о).",
+      "examples": [
+        {"de": "Ich warte auf den Bus.", "ru": "Я жду автобус."},
+        {"de": "Sie freut sich auf die Reise.", "ru": "Она радуется предстоящей поездке."},
+        {"de": "Er denkt an seine Familie.", "ru": "Он думает о своей семье."}
+      ]
+    },
+    {
+      "id": "a2-dass-ob-satz",
+      "level": "A2",
+      "category": "Синтаксис",
+      "title": "Придаточные с dass и ob",
+      "explanation": "Dass вводит придаточное дополнительное предложение («что»), ob — косвенный вопрос без вопросительного слова («ли»). В обоих случаях спрягаемый глагол уходит в конец.",
+      "examples": [
+        {"de": "Ich hoffe, dass es morgen sonnig wird.", "ru": "Я надеюсь, что завтра будет солнечно."},
+        {"de": "Ich weiß nicht, ob er kommt.", "ru": "Я не знаю, придёт ли он."},
+        {"de": "Sie fragt, ob ich Zeit habe.", "ru": "Она спрашивает, есть ли у меня время."}
+      ]
+    },
+    {
+      "id": "a2-zu-infinitiv",
+      "level": "A2",
+      "category": "Синтаксис",
+      "title": "Конструкции с zu + Infinitiv",
+      "explanation": "Um...zu выражает цель, ohne...zu — действие без чего-либо, statt...zu — «вместо того чтобы». Инфинитив с zu ставится в конец оборота.",
+      "examples": [
+        {"de": "Ich lerne Deutsch, um in Deutschland zu arbeiten.", "ru": "Я учу немецкий, чтобы работать в Германии."},
+        {"de": "Er ging, ohne sich zu verabschieden.", "ru": "Он ушёл, не попрощавшись."},
+        {"de": "Statt zu arbeiten, schläft er.", "ru": "Вместо того чтобы работать, он спит."}
+      ]
+    },
+    {
+      "id": "a2-futur1",
+      "level": "A2",
+      "category": "Глаголы",
+      "title": "Futur I — будущее время",
+      "explanation": "Образуется вспомогательным глаголом werden + инфинитив смыслового глагола в конце предложения. В разговорной речи будущее часто выражают просто настоящим временем с указанием времени.",
+      "examples": [
+        {"de": "Ich werde morgen anrufen.", "ru": "Я позвоню завтра."},
+        {"de": "Es wird bald regnen.", "ru": "Скоро пойдёт дождь."},
+        {"de": "Wir werden das Projekt beenden.", "ru": "Мы завершим проект."}
+      ]
+    },
+    {
+      "id": "a2-indefinitpronomen",
+      "level": "A2",
+      "category": "Местоимения",
+      "title": "Indefinitpronomen — неопределённые местоимения",
+      "explanation": "Man (обобщённое «ты/вы/некто»), jemand (кто-то), niemand (никто), etwas (что-то), nichts (ничего) заменяют неизвестное или неважное лицо/предмет.",
+      "examples": [
+        {"de": "Man spricht hier Deutsch.", "ru": "Здесь говорят по-немецки."},
+        {"de": "Jemand hat angerufen.", "ru": "Кто-то звонил."},
+        {"de": "Ich habe nichts gesagt.", "ru": "Я ничего не сказал(а)."}
+      ]
+    },
+    {
+      "id": "b1-konnektoren",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Konnektoren: deshalb, trotzdem, außerdem",
+      "explanation": "Эти союзные наречия связывают два самостоятельных предложения и, в отличие от союзов вроде weil, занимают первое место в своём предложении — поэтому глагол сразу идёт вторым.",
+      "examples": [
+        {"de": "Es regnet, deshalb bleibe ich zu Hause.", "ru": "Идёт дождь, поэтому я остаюсь дома."},
+        {"de": "Er war müde, trotzdem arbeitete er weiter.", "ru": "Он устал, тем не менее продолжал работать."},
+        {"de": "Sie lernt Deutsch, außerdem spricht sie Englisch.", "ru": "Она учит немецкий, кроме того говорит по-английски."}
+      ]
+    },
+    {
+      "id": "b1-als-wenn",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Als и wenn — различие во времени",
+      "explanation": "Als используется для однократного действия в прошлом, wenn — для повторяющихся действий в прошлом или для настоящего/будущего времени.",
+      "examples": [
+        {"de": "Als ich acht war, zogen wir um.", "ru": "Когда мне было восемь, мы переехали (однократно, прошлое)."},
+        {"de": "Immer wenn ich müde war, trank ich Kaffee.", "ru": "Всегда, когда я уставал, я пил кофе (повторение)."},
+        {"de": "Wenn ich Zeit habe, lese ich.", "ru": "Когда у меня есть время, я читаю (настоящее)."}
+      ]
+    },
+    {
+      "id": "b1-plusquamperfekt",
+      "level": "B1",
+      "category": "Глаголы",
+      "title": "Plusquamperfekt — предпрошедшее время",
+      "explanation": "Образуется Präteritum глагола haben/sein + Partizip II. Показывает действие, которое произошло раньше другого действия в прошлом, часто вместе с nachdem.",
+      "examples": [
+        {"de": "Ich hatte gegessen, bevor ich ging.", "ru": "Я уже поел, прежде чем ушёл."},
+        {"de": "Nachdem sie angekommen war, rief sie an.", "ru": "После того как она прибыла, она позвонила."},
+        {"de": "Er war schon weg, als ich kam.", "ru": "Он уже ушёл, когда я пришёл."}
+      ]
+    },
+    {
+      "id": "b1-indirekte-fragen",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Indirekte Fragesätze — косвенные вопросы",
+      "explanation": "Косвенный вопрос встраивается в другое предложение без вопросительного порядка слов: вопросительное слово или ob вводит придаточное, глагол уходит в конец.",
+      "examples": [
+        {"de": "Ich weiß nicht, wo er wohnt.", "ru": "Я не знаю, где он живёт."},
+        {"de": "Kannst du mir sagen, wie spät es ist?", "ru": "Можешь сказать мне, который час?"},
+        {"de": "Sie fragte, warum ich traurig war.", "ru": "Она спросила, почему я грустил(а)."}
+      ]
+    },
+    {
+      "id": "b1-finalsaetze",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Finalsätze: damit и um...zu",
+      "explanation": "Оба выражают цель («чтобы»). Um...zu используется, если подлежащее в главном и придаточном одно и то же; damit — обязательно, если подлежащие разные.",
+      "examples": [
+        {"de": "Ich lerne, um die Prüfung zu bestehen.", "ru": "Я учусь, чтобы сдать экзамен (одно подлежащее)."},
+        {"de": "Ich erkläre es dir, damit du es verstehst.", "ru": "Я объясняю тебе это, чтобы ты понял (разные подлежащие)."},
+        {"de": "Sie spricht laut, damit alle sie hören.", "ru": "Она говорит громко, чтобы все её слышали."}
+      ]
+    },
+    {
+      "id": "b1-konzessivsaetze",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Konzessivsätze: obwohl",
+      "explanation": "Obwohl вводит придаточное уступки («хотя»), глагол уходит в конец придаточного. Это союз, соединяющий главное и придаточное в одно предложение — в отличие от наречия trotzdem.",
+      "examples": [
+        {"de": "Obwohl es regnet, gehen wir spazieren.", "ru": "Хотя идёт дождь, мы идём гулять."},
+        {"de": "Er kam, obwohl er krank war.", "ru": "Он пришёл, хотя был болен."},
+        {"de": "Sie hat die Prüfung bestanden, obwohl sie wenig gelernt hatte.", "ru": "Она сдала экзамен, хотя мало учила."}
+      ]
+    },
+    {
+      "id": "b2-konjunktiv2-vergangenheit",
+      "level": "B2",
+      "category": "Глаголы",
+      "title": "Konjunktiv II der Vergangenheit",
+      "explanation": "Образуется hätte/wäre + Partizip II. Выражает нереальное условие или сожаление о прошлом — то, что могло бы произойти, но не произошло.",
+      "examples": [
+        {"de": "Ich hätte das nicht gemacht.", "ru": "Я бы этого не сделал(а)."},
+        {"de": "Wenn ich es gewusst hätte, wäre ich gekommen.", "ru": "Если бы я это знал(а), я бы пришёл/пришла."},
+        {"de": "Wärst du früher gegangen, hättest du den Bus erreicht.", "ru": "Если бы ты ушёл раньше, ты бы успел на автобус."}
+      ]
+    },
+    {
+      "id": "b2-funktionsverbgefuege",
+      "level": "B2",
+      "category": "Лексика",
+      "title": "Funktionsverbgefüge — глагольно-именные обороты",
+      "explanation": "В официальном и деловом стиле вместо простого глагола часто используется сочетание «полупустого» глагола с существительным: in Frage stellen вместо fragen, zur Verfügung stellen вместо geben.",
+      "examples": [
+        {"de": "Das stellt das Ergebnis in Frage.", "ru": "Это ставит результат под вопрос."},
+        {"de": "Wir stellen Ihnen die Unterlagen zur Verfügung.", "ru": "Мы предоставляем вам документы."},
+        {"de": "Er nahm an der Diskussion teil.", "ru": "Он принял участие в дискуссии."}
+      ]
+    },
+    {
+      "id": "b2-sein-zu-infinitiv",
+      "level": "B2",
+      "category": "Глаголы",
+      "title": "Sein + zu + Infinitiv",
+      "explanation": "Конструкция с модальным оттенком возможности или необходимости, близкая по смыслу к пассиву с müssen/können: «должно быть сделано» или «может быть сделано».",
+      "examples": [
+        {"de": "Die Aufgabe ist noch zu lösen.", "ru": "Задачу ещё нужно решить."},
+        {"de": "Das Problem ist leicht zu erklären.", "ru": "Проблему легко объяснить."},
+        {"de": "Die Regeln sind zu beachten.", "ru": "Правила нужно соблюдать."}
+      ]
+    },
+    {
+      "id": "b2-genitivpraepositionen",
+      "level": "B2",
+      "category": "Падежи",
+      "title": "Предлоги с Genitiv",
+      "explanation": "Während (во время), trotz (несмотря на), wegen (из-за), aufgrund (в связи с) традиционно требуют Genitiv, хотя в разговорной речи после них всё чаще используют Dativ.",
+      "examples": [
+        {"de": "Während des Sommers reisen viele Menschen.", "ru": "Летом многие люди путешествуют."},
+        {"de": "Wegen des Regens blieben wir zu Hause.", "ru": "Из-за дождя мы остались дома."},
+        {"de": "Trotz seiner Krankheit arbeitete er weiter.", "ru": "Несмотря на болезнь, он продолжал работать."}
+      ]
+    },
+    {
+      "id": "b2-obwohl-trotzdem",
+      "level": "B2",
+      "category": "Синтаксис",
+      "title": "Obwohl vs. trotzdem: союз или наречие",
+      "explanation": "Obwohl — подчинительный союз, объединяющий два предложения в одно сложное с глаголом в конце придаточного. Trotzdem — наречие в самостоятельном предложении, после которого следует обычный порядок слов с глаголом на втором месте.",
+      "examples": [
+        {"de": "Obwohl es kalt war, gingen wir schwimmen.", "ru": "Хотя было холодно, мы пошли купаться."},
+        {"de": "Es war kalt. Trotzdem gingen wir schwimmen.", "ru": "Было холодно. Тем не менее мы пошли купаться."},
+        {"de": "Er ist reich, trotzdem ist er nicht glücklich.", "ru": "Он богат, тем не менее он не счастлив."}
+      ]
+    },
+    {
+      "id": "c1-nominalstil",
+      "level": "C1",
+      "category": "Стиль",
+      "title": "Nominalstil vs. Verbalstil",
+      "explanation": "Номинальный стиль (с существительными вместо глаголов) типичен для официальных и научных текстов и звучит более формально и сжато, чем глагольный стиль разговорной речи.",
+      "examples": [
+        {"de": "nach Prüfung der Unterlagen (номинальный)", "ru": "после проверки документов"},
+        {"de": "nachdem die Unterlagen geprüft wurden (глагольный)", "ru": "после того как документы были проверены"},
+        {"de": "die Durchführung der Reform", "ru": "проведение реформы"}
+      ]
+    },
+    {
+      "id": "c1-passiversatzformen",
+      "level": "C1",
+      "category": "Глаголы",
+      "title": "Passiversatzformen — замены пассива",
+      "explanation": "Кроме werden-Passiv, значение пассива и возможности/необходимости можно передать конструкциями sich lassen + Infinitiv или прилагательными на -bar/-lich.",
+      "examples": [
+        {"de": "Das Problem lässt sich lösen.", "ru": "Проблему можно решить."},
+        {"de": "Das ist machbar.", "ru": "Это осуществимо (можно сделать)."},
+        {"de": "Der Text ist verständlich geschrieben.", "ru": "Текст написан понятно."}
+      ]
+    },
+    {
+      "id": "c1-anaphorische-verweise",
+      "level": "C1",
+      "category": "Стиль",
+      "title": "Anaphorische Verweise — ссылки внутри текста",
+      "explanation": "Dieser/jener и ersterer/letzterer используются в письменной речи для ссылки на упомянутые ранее объекты, чтобы избежать повторения существительных.",
+      "examples": [
+        {"de": "Er traf Anna und Paul; ersterer war fröhlich, letzterer müde.", "ru": "Он встретил Анну и Пауля; первая была весёлой, второй — уставшим."},
+        {"de": "Dieser Vorschlag scheint sinnvoll.", "ru": "Это предложение кажется разумным."},
+        {"de": "Jener Zeitpunkt war entscheidend.", "ru": "Тот момент был решающим."}
+      ]
+    },
+    {
+      "id": "c1-satzverschraenkung",
+      "level": "C1",
+      "category": "Синтаксис",
+      "title": "Satzverschränkung — вложенные конструкции",
+      "explanation": "В сложных текстах придаточные предложения могут вкладываться друг в друга или прерываться другими элементами, что требует внимательного отслеживания структуры при чтении и письме.",
+      "examples": [
+        {"de": "Der Mann, den ich gestern, als ich einkaufen war, getroffen habe, ist mein Nachbar.", "ru": "Мужчина, которого я встретил вчера, когда ходил за покупками, — мой сосед."},
+        {"de": "Das Buch, das, wie ich hörte, sehr gut ist, habe ich noch nicht gelesen.", "ru": "Книгу, которая, как я слышал, очень хороша, я ещё не читал."},
+        {"de": "Sie sagte, dass sie, obwohl sie müde war, weiterarbeitete.", "ru": "Она сказала, что, хотя устала, продолжала работать."}
+      ]
+    },
+    {
+      "id": "c2-ironie-untertreibung",
+      "level": "C2",
+      "category": "Стиль",
+      "title": "Ironie und Untertreibung (Litotes)",
+      "explanation": "Носители языка нередко выражают мысль через противоположное (иронию) или через двойное отрицание/приуменьшение (литота), что требует понимания контекста и интонации, а не буквального значения слов.",
+      "examples": [
+        {"de": "Na, das war ja mal wieder toll gelaufen!", "ru": "Ну, это опять прошло просто отлично! (иронично, на самом деле плохо)"},
+        {"de": "Das ist nicht schlecht.", "ru": "Это неплохо (литота: на самом деле «очень хорошо»)."},
+        {"de": "Er ist nicht gerade der Fleißigste.", "ru": "Он не самый прилежный (мягкая ирония: на самом деле ленивый)."}
+      ]
+    },
+    {
+      "id": "c2-wortbildung",
+      "level": "C2",
+      "category": "Лексика",
+      "title": "Wortbildung: Komposita и Ableitungen",
+      "explanation": "Немецкий язык активно образует новые слова через словосложение (Komposition) и словообразовательные суффиксы (Derivation), что позволяет выражать сложные понятия одним словом.",
+      "examples": [
+        {"de": "die Lebensversicherung (Leben + Versicherung)", "ru": "страхование жизни"},
+        {"de": "die Unabhängigkeit (un- + abhängig + -keit)", "ru": "независимость"},
+        {"de": "der Weltraumforscher", "ru": "исследователь космоса"}
+      ]
+    },
+    {
+      "id": "c2-sprachvarianten",
+      "level": "C2",
+      "category": "Стиль",
+      "title": "Regionale und stilistische Sprachvarianten",
+      "explanation": "Немецкий язык заметно различается между регионами (Германия, Австрия, Швейцария) и стилями — от диалектной окраски до подчёркнуто литературного языка, что важно распознавать на продвинутом уровне.",
+      "examples": [
+        {"de": "Samstag (Deutschland) / Sonnabend (regional)", "ru": "суббота — региональные варианты"},
+        {"de": "das Brötchen (Deutschland) / die Semmel (Österreich, Bayern)", "ru": "булочка — региональные варианты"},
+        {"de": "Grüß Gott (süddeutsch/österreichisch) / Guten Tag (norddeutsch/neutral)", "ru": "здравствуйте — региональные приветствия"}
+      ]
     }
   ]
 }
