@@ -86,6 +86,8 @@ button:active{transform:translateY(1px)}
 .vocab-list-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .vocab-add-btn.is-added{color:var(--green);border-color:rgba(95,185,140,.35);cursor:default}
 .vocab-add-btn.is-added:hover{background:var(--panel-2)}
+.vocab-mode-switch{margin-bottom:14px}
+.vocab-load-more-wrap{padding:18px;text-align:center}
 .annotation{display:inline;background:var(--accent-dim);border-bottom:1px solid var(--accent);border-radius:2px;padding:1px 2px}
 .active-word{background:rgba(91,141,239,.35);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.4)}
 .hover-word{background:rgba(91,141,239,.18);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.2)}
@@ -382,7 +384,44 @@ button:active{transform:translateY(1px)}
     <div class="learning-stats" id="vocabStatus">0 слов</div>
   </div>
 
+  <div class="segmented vocab-mode-switch" id="vocabModeSwitch">
+    <button class="segmented-btn active" type="button" data-mode="search">Поиск</button>
+    <button class="segmented-btn" type="button" data-mode="alphabet">По алфавиту</button>
+  </div>
+
   <input type="text" id="vocabSearchInput" class="vocab-search" placeholder="Поиск по-немецки или по-русски...">
+
+  <div class="level-chips" id="vocabLetters" style="display:none">
+    <button class="level-chip" type="button" data-letter="A">A</button>
+    <button class="level-chip" type="button" data-letter="Ä">Ä</button>
+    <button class="level-chip" type="button" data-letter="B">B</button>
+    <button class="level-chip" type="button" data-letter="C">C</button>
+    <button class="level-chip" type="button" data-letter="D">D</button>
+    <button class="level-chip" type="button" data-letter="E">E</button>
+    <button class="level-chip" type="button" data-letter="F">F</button>
+    <button class="level-chip" type="button" data-letter="G">G</button>
+    <button class="level-chip" type="button" data-letter="H">H</button>
+    <button class="level-chip" type="button" data-letter="I">I</button>
+    <button class="level-chip" type="button" data-letter="J">J</button>
+    <button class="level-chip" type="button" data-letter="K">K</button>
+    <button class="level-chip" type="button" data-letter="L">L</button>
+    <button class="level-chip" type="button" data-letter="M">M</button>
+    <button class="level-chip" type="button" data-letter="N">N</button>
+    <button class="level-chip" type="button" data-letter="O">O</button>
+    <button class="level-chip" type="button" data-letter="Ö">Ö</button>
+    <button class="level-chip" type="button" data-letter="P">P</button>
+    <button class="level-chip" type="button" data-letter="Q">Q</button>
+    <button class="level-chip" type="button" data-letter="R">R</button>
+    <button class="level-chip" type="button" data-letter="S">S</button>
+    <button class="level-chip" type="button" data-letter="T">T</button>
+    <button class="level-chip" type="button" data-letter="U">U</button>
+    <button class="level-chip" type="button" data-letter="Ü">Ü</button>
+    <button class="level-chip" type="button" data-letter="V">V</button>
+    <button class="level-chip" type="button" data-letter="W">W</button>
+    <button class="level-chip" type="button" data-letter="X">X</button>
+    <button class="level-chip" type="button" data-letter="Y">Y</button>
+    <button class="level-chip" type="button" data-letter="Z">Z</button>
+  </div>
 
   <div class="dictionary-filters vocab-filters" id="vocabFilters">
     <button class="filter-chip active" type="button" data-category="noun">Существительные</button>
@@ -396,6 +435,9 @@ button:active{transform:translateY(1px)}
 
   <div class="vocab-list-wrap">
     <div id="vocabList" class="dictionary-list"></div>
+    <div id="vocabLoadMoreWrap" class="vocab-load-more-wrap" style="display:none">
+      <button class="btn" id="vocabLoadMoreBtn" type="button">Показать ещё</button>
+    </div>
   </div>
 </section>
 
@@ -2057,8 +2099,12 @@ function renderDictionary(){
 /* ---------- vocabulary browser (full FreeDict DE->RU dictionary) ---------- */
 
 let activeVocabCategories = new Set(WORD_CATEGORIES);
+let vocabMode = "search"; // "search" | "alphabet"
 let vocabSearchQuery = "";
+let vocabSelectedLetter = null;
+let vocabAlphabetRenderLimit = 200;
 const VOCAB_RESULT_LIMIT = 150;
+const VOCAB_ALPHABET_PAGE_SIZE = 200;
 
 // customDictionary entries win over localDictionary for the same key,
 // matching lookupDirect()'s priority; localDictionary is huge (26k+),
@@ -2074,54 +2120,80 @@ function* iterateAllDictionaryEntries(){
   }
 }
 
+function wordStartsWithLetter(word, letter){
+  return (word.charAt(0) || "").toUpperCase() === letter;
+}
+
+function renderVocabWordRow(entry){
+  const key = normalizeWord(entry.word);
+  const alreadyAdded = savedWords.some(x => normalizeWord(x.word) === key);
+  return `
+    <div class="dictionary-item">
+      <div>
+        <div class="dictionary-word">${escapeHtml(entry.word)}</div>
+        <div class="dictionary-form">${escapeHtml(entry.grammar || "")}</div>
+      </div>
+      <div class="dictionary-translation">${escapeHtml(normalizeTranslation(entry.translation))}</div>
+      <button class="dictionary-delete vocab-add-btn${alreadyAdded ? " is-added" : ""}" type="button"
+              data-vocab-key="${escapeHtml(key)}" ${alreadyAdded ? "disabled" : ""}>
+        ${alreadyAdded ? "✓ В карточках" : "+ В карточки"}
+      </button>
+    </div>
+  `;
+}
+
 function renderVocabList(){
   const listEl = document.getElementById("vocabList");
   const statusEl2 = document.getElementById("vocabStatus");
-  const query = vocabSearchQuery.trim().toLowerCase();
+  const loadMoreWrap = document.getElementById("vocabLoadMoreWrap");
 
-  const matches = [];
-  for(const [key, entry] of iterateAllDictionaryEntries()){
-    if(!activeVocabCategories.has(classifyWordCategory(entry))) continue;
-    if(query){
-      const translation = normalizeTranslation(entry.translation).toLowerCase();
-      if(!key.includes(query) && !translation.includes(query)) continue;
-    }
-    matches.push(entry);
-  }
-
-  statusEl2.textContent = matches.length
-    ? matches.length.toLocaleString("ru-RU") + " слов" +
-      (matches.length > VOCAB_RESULT_LIMIT ? " · показаны первые " + VOCAB_RESULT_LIMIT : "")
-    : "Ничего не найдено";
-
-  if(!matches.length){
-    listEl.innerHTML = '<div class="dictionary-empty">Ничего не найдено. Попробуй изменить фильтры или поиск.</div>';
+  if(vocabMode === "alphabet" && !vocabSelectedLetter){
+    statusEl2.textContent = "Выбери букву";
+    listEl.innerHTML = '<div class="dictionary-empty">Выбери букву выше, чтобы полистать словарь — как в бумажной книге.</div>';
+    loadMoreWrap.style.display = "none";
     return;
   }
 
-  const shown = matches.slice(0, VOCAB_RESULT_LIMIT);
+  const query = vocabSearchQuery.trim().toLowerCase();
+  const matches = [];
 
-  listEl.innerHTML = shown.map(entry => {
-    const key = normalizeWord(entry.word);
-    const alreadyAdded = savedWords.some(x => normalizeWord(x.word) === key);
-    return `
-      <div class="dictionary-item">
-        <div>
-          <div class="dictionary-word">${escapeHtml(entry.word)}</div>
-          <div class="dictionary-form">${escapeHtml(entry.grammar || "")}</div>
-        </div>
-        <div class="dictionary-translation">${escapeHtml(normalizeTranslation(entry.translation))}</div>
-        <button class="dictionary-delete vocab-add-btn${alreadyAdded ? " is-added" : ""}" type="button"
-                data-vocab-key="${escapeHtml(key)}" ${alreadyAdded ? "disabled" : ""}>
-          ${alreadyAdded ? "✓ В карточках" : "+ В карточки"}
-        </button>
-      </div>
-    `;
-  }).join("");
+  for(const [key, entry] of iterateAllDictionaryEntries()){
+    if(!activeVocabCategories.has(classifyWordCategory(entry))) continue;
+
+    if(vocabMode === "alphabet"){
+      if(!wordStartsWithLetter(entry.word, vocabSelectedLetter)) continue;
+    }else if(query){
+      const translation = normalizeTranslation(entry.translation).toLowerCase();
+      if(!key.includes(query) && !translation.includes(query)) continue;
+    }
+
+    matches.push(entry);
+  }
+
+  if(vocabMode === "alphabet"){
+    matches.sort((a, b) => a.word.localeCompare(b.word, "de"));
+  }
+
+  if(!matches.length){
+    statusEl2.textContent = "Ничего не найдено";
+    listEl.innerHTML = '<div class="dictionary-empty">Ничего не найдено. Попробуй изменить фильтры или поиск.</div>';
+    loadMoreWrap.style.display = "none";
+    return;
+  }
+
+  const limit = vocabMode === "alphabet" ? vocabAlphabetRenderLimit : VOCAB_RESULT_LIMIT;
+  const shown = matches.slice(0, limit);
+
+  statusEl2.textContent = matches.length.toLocaleString("ru-RU") + " слов" +
+    (matches.length > shown.length ? " · показано " + shown.length.toLocaleString("ru-RU") : "");
+
+  listEl.innerHTML = shown.map(renderVocabWordRow).join("");
 
   listEl.querySelectorAll("[data-vocab-key]").forEach(button => {
     button.addEventListener("click", () => addWordFromVocab(button.dataset.vocabKey));
   });
+
+  loadMoreWrap.style.display = (vocabMode === "alphabet" && matches.length > shown.length) ? "block" : "none";
 }
 
 function addWordFromVocab(key){
@@ -2160,6 +2232,30 @@ vocabSearchInput.addEventListener("input", () => {
     vocabSearchQuery = vocabSearchInput.value;
     renderVocabList();
   }, 200);
+});
+
+document.querySelectorAll("#vocabModeSwitch .segmented-btn").forEach(button => {
+  button.addEventListener("click", () => {
+    vocabMode = button.dataset.mode;
+    document.querySelectorAll("#vocabModeSwitch .segmented-btn").forEach(b => b.classList.toggle("active", b === button));
+    vocabSearchInput.style.display = vocabMode === "search" ? "" : "none";
+    document.getElementById("vocabLetters").style.display = vocabMode === "alphabet" ? "" : "none";
+    renderVocabList();
+  });
+});
+
+document.querySelectorAll("#vocabLetters .level-chip").forEach(button => {
+  button.addEventListener("click", () => {
+    vocabSelectedLetter = button.dataset.letter;
+    vocabAlphabetRenderLimit = VOCAB_ALPHABET_PAGE_SIZE;
+    document.querySelectorAll("#vocabLetters .level-chip").forEach(b => b.classList.toggle("active", b === button));
+    renderVocabList();
+  });
+});
+
+document.getElementById("vocabLoadMoreBtn").addEventListener("click", () => {
+  vocabAlphabetRenderLimit += VOCAB_ALPHABET_PAGE_SIZE;
+  renderVocabList();
 });
 
 /* ---------- learning tab (flashcards) ---------- */
