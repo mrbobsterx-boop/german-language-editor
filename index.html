@@ -21,7 +21,7 @@ body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-famil
 button,input{font:inherit}
 button{cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease}
 button:active{transform:translateY(1px)}
-.app{min-height:100vh;display:flex;flex-direction:column}
+.app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
 .topbar{min-height:64px;padding:10px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--bg-soft)}
 .brand{font-size:18px;font-weight:700;color:var(--heading);letter-spacing:-.01em;display:flex;align-items:center;gap:9px;white-space:nowrap}
 .brand::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}
@@ -33,10 +33,19 @@ button:active{transform:translateY(1px)}
 .tab-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-strong)}
 .autosave-badge{font-size:11px;color:var(--muted);padding:6px 11px;border:1px solid var(--line-soft);border-radius:999px;background:var(--panel);white-space:nowrap}
 .autosave-badge.is-error{color:var(--red);border-color:rgba(224,133,127,.4)}
+.autosave-badge.is-ok{color:var(--green);border-color:rgba(95,185,140,.35)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.visible{display:flex}
+.modal{width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:22px}
+.modal-title{font-size:17px;font-weight:700;color:var(--heading);margin-bottom:10px}
+.modal-text{font-size:13px;color:var(--text-dim);line-height:1.55;margin-bottom:14px}
+.modal-actions{display:flex;gap:8px;margin-top:14px}
+.modal-actions .btn{flex:1}
+.modal-hint{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5}
 .toggle{display:flex;align-items:center;gap:7px;margin-left:4px;color:var(--muted);font-size:13px;user-select:none;white-space:nowrap}
-.workspace{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}
+.workspace{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:1fr;min-height:0}
 .workspace.single{grid-template-columns:1fr}
-.column{min-width:0;display:flex;flex-direction:column}
+.column{min-width:0;min-height:0;display:flex;flex-direction:column}
 .column+.column{border-left:1px solid var(--line)}
 .column-header{height:48px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);color:var(--heading);font-weight:600;font-size:13px;background:var(--panel)}
 .column-header small{color:var(--muted);font-weight:400;font-size:12px}
@@ -83,7 +92,10 @@ button:active{transform:translateY(1px)}
 .segmented{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px}
 .segmented-btn{border:none;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;font-size:12px;font-weight:500}
 .segmented-btn.active{background:var(--accent);color:#10151c}
-.learning-main{display:grid;grid-template-columns:minmax(0,620px) minmax(260px,1fr);gap:28px;align-items:start}
+.study-toolbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.learning-panel{display:none;max-width:620px}
+.learning-panel.active{display:block}
+.learning-panel.list-panel{max-width:none}
 .progress-bar{height:5px;border-radius:999px;background:var(--line-soft);overflow:hidden;margin-bottom:8px}
 .progress-fill{height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .25s ease}
 .progress-label{font-size:11px;color:var(--muted);margin-bottom:14px}
@@ -133,7 +145,9 @@ button:active{transform:translateY(1px)}
     <button class="btn tab-btn active" id="editorTabBtn">Редактор</button>
     <button class="btn tab-btn" id="learningTabBtn">Обучение</button>
     <span class="autosave-badge" id="autosaveBadge">● Память ещё не сохранялась</span>
+    <span class="autosave-badge" id="githubSyncBadge" title="Статус синхронизации карточек с репозиторием на GitHub">☁ GitHub: проверка...</span>
     <button class="btn" id="memoryBtn" title="Необязательно: локальная память сохраняется в браузере автоматически. Файл — это просто резервная копия.">Резервная копия в файл</button>
+    <button class="btn" id="githubSyncBtn" title="Настроить синхронизацию карточек с репозиторием GitHub">GitHub-синхронизация</button>
     <label class="toggle">
       <input type="checkbox" id="dictionaryToggle" checked>
       Слова для обучения
@@ -165,51 +179,57 @@ button:active{transform:translateY(1px)}
 <section class="view learning-view" id="learningView">
   <div class="learning-head">
     <div>
-      <div class="learning-title">Карточки для запоминания</div>
-      <div class="learning-subtitle">Слова из твоей личной памяти — сохраняются автоматически в этом браузере</div>
+      <div class="learning-title">Обучение слов</div>
+      <div class="learning-subtitle">Слова из твоей личной памяти — сохраняются автоматически</div>
     </div>
     <div class="learning-stats" id="learningStats">0 слов</div>
   </div>
 
   <div class="study-toolbar">
-    <div class="segmented" id="studyFilter">
-      <button class="segmented-btn active" type="button" data-filter="all">Все слова</button>
-      <button class="segmented-btn" type="button" data-filter="review">Только повторить</button>
+    <div class="segmented" id="learningSubTabs">
+      <button class="segmented-btn active" type="button" data-subtab="cards">Карточки</button>
+      <button class="segmented-btn" type="button" data-subtab="list">Список слов</button>
     </div>
-    <button class="btn" id="shuffleStudyBtn" type="button">Перемешать</button>
+    <div class="study-toolbar-right" id="cardsToolbarRight">
+      <div class="segmented" id="studyFilter">
+        <button class="segmented-btn active" type="button" data-filter="all">Все слова</button>
+        <button class="segmented-btn" type="button" data-filter="review">Только повторить</button>
+      </div>
+      <button class="btn" id="shuffleStudyBtn" type="button">Перемешать</button>
+    </div>
   </div>
 
-  <div class="learning-main">
-    <div>
-      <div class="progress-bar"><div class="progress-fill" id="studyProgressFill"></div></div>
-      <div class="progress-label" id="studyProgressLabel">0 / 0</div>
+  <div class="learning-panel active" id="cardsPanel">
+    <div class="progress-bar"><div class="progress-fill" id="studyProgressFill"></div></div>
+    <div class="progress-label" id="studyProgressLabel">0 / 0</div>
 
-      <div class="flip-card" id="flipCard">
-        <div class="flip-card-inner" id="flipCardInner">
-          <div class="flip-face flip-front">
-            <div class="study-label">Немецкое слово</div>
-            <div class="study-word" id="studyWord">Нет слов для обучения</div>
-            <div class="study-form" id="studyForm"></div>
-            <div class="flip-hint">Нажми на карточку или пробел, чтобы увидеть перевод</div>
-          </div>
-          <div class="flip-face flip-back">
-            <div class="study-label">Перевод</div>
-            <div class="study-translation" id="studyTranslation">—</div>
-          </div>
+    <div class="flip-card" id="flipCard">
+      <div class="flip-card-inner" id="flipCardInner">
+        <div class="flip-face flip-front">
+          <div class="study-label">Немецкое слово</div>
+          <div class="study-word" id="studyWord">Нет слов для обучения</div>
+          <div class="study-form" id="studyForm"></div>
+          <div class="flip-hint">Нажми на карточку или W, чтобы увидеть перевод</div>
+        </div>
+        <div class="flip-face flip-back">
+          <div class="study-label">Перевод</div>
+          <div class="study-translation" id="studyTranslation">—</div>
         </div>
       </div>
-
-      <div class="study-actions">
-        <button class="btn" id="repeatStudyBtn" type="button">Повторить ещё раз</button>
-        <button class="btn primary" id="knowStudyBtn" type="button">Знаю ✓</button>
-      </div>
-      <div class="study-secondary">
-        <button class="btn" id="prevStudyBtn" type="button">← Назад</button>
-        <button class="btn" id="nextStudyBtn" type="button">Вперёд →</button>
-      </div>
-      <div class="study-keys-hint">Пробел — перевернуть · ← / → — навигация · K — знаю · R — повторить</div>
     </div>
 
+    <div class="study-actions">
+      <button class="btn" id="repeatStudyBtn" type="button" title="Переносит слово в папку «Повторить»">Повторить</button>
+      <button class="btn primary" id="knowStudyBtn" type="button" title="Переносит слово в папку «Знаю»">Знаю ✓</button>
+    </div>
+    <div class="study-secondary">
+      <button class="btn" id="prevStudyBtn" type="button">← Назад</button>
+      <button class="btn" id="nextStudyBtn" type="button">Вперёд →</button>
+    </div>
+    <div class="study-keys-hint">W — показать перевод · S — скрыть · A / D — назад/вперёд · Enter — знаю · Пробел — повторить</div>
+  </div>
+
+  <div class="learning-panel list-panel" id="listPanel">
     <div class="learning-list">
       <div class="learning-list-head">Моя память</div>
       <div id="learningList"></div>
@@ -251,6 +271,26 @@ button:active{transform:translateY(1px)}
   <div class="popup-actions">
     <button class="btn" id="annotateBtn">Добавить в текст</button>
     <button class="btn primary" id="dictionaryBtn">Сохранить в словарь</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="githubModalOverlay">
+  <div class="modal">
+    <div class="modal-title">Синхронизация с GitHub</div>
+    <div class="modal-text">
+      Карточки читаются из <code>data/learning-memory.json</code> в репозитории на любом устройстве без токена.
+      Чтобы этот браузер мог их туда <b>сохранять</b>, вставь GitHub personal access token
+      с доступом «Contents: Read and write» только к этому репозиторию.
+    </div>
+    <input type="password" class="popup-input" id="githubTokenInput" placeholder="github_pat_...">
+    <div class="modal-actions">
+      <button class="btn" id="githubTokenClearBtn" type="button">Удалить токен</button>
+      <button class="btn primary" id="githubTokenSaveBtn" type="button">Сохранить</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="githubModalCloseBtn" type="button" style="flex:1">Закрыть</button>
+    </div>
+    <div class="modal-hint">Токен хранится только в этом браузере (localStorage) и используется только для запросов к GitHub API этого репозитория.</div>
   </div>
 </div>
 
@@ -388,6 +428,7 @@ async function saveLearningMemoryFile(){
 async function saveLearningMemory(){
   const localOk = saveLearningMemoryLocal();
   const fileOk = await saveLearningMemoryFile();
+  pushMemoryToGithub();
 
   if(fileOk){
     statusEl.textContent = "Слово сохранено в памяти и в файле " + memoryFileName;
@@ -558,6 +599,259 @@ function injectLearningWordsIntoDictionary(){
     });
   }
 }
+
+/* ---------- GitHub sync ----------
+   The learning memory is mirrored to data/learning-memory.json in this
+   repository, so it can be read from any browser with no credentials
+   (public repo, raw GitHub content). Saving it back needs a personal
+   access token, entered once per browser via the sync modal and kept
+   only in that browser's localStorage.
+*/
+const GITHUB_OWNER = "mrbobsterx-boop";
+const GITHUB_REPO = "german-language-editor";
+const GITHUB_BRANCH = "main";
+const GITHUB_MEMORY_PATH = "data/learning-memory.json";
+const GITHUB_TOKEN_KEY = "german-language-editor-github-token";
+const githubSyncBadge = document.getElementById("githubSyncBadge");
+
+let githubRemoteSha = null;
+let githubSyncInFlight = false;
+let githubSyncQueued = false;
+
+function getGithubToken(){
+  try{
+    return localStorage.getItem(GITHUB_TOKEN_KEY) || "";
+  }catch(error){
+    return "";
+  }
+}
+
+function utf8ToBase64(text){
+  return btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+}
+
+function base64ToUtf8(base64){
+  const clean = base64.replace(/\n/g, "");
+  return new TextDecoder().decode(Uint8Array.from(atob(clean), c => c.charCodeAt(0)));
+}
+
+function updateGithubSyncBadge(state, detail){
+  if(!githubSyncBadge) return;
+  githubSyncBadge.classList.remove("is-error", "is-ok");
+
+  if(state === "syncing"){
+    githubSyncBadge.textContent = "☁ GitHub: синхронизация...";
+  }else if(state === "synced"){
+    const time = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    githubSyncBadge.textContent = "☁ GitHub: сохранено · " + time;
+    githubSyncBadge.classList.add("is-ok");
+  }else if(state === "read-only"){
+    githubSyncBadge.textContent = "☁ GitHub: только чтение (нет токена)";
+  }else if(state === "no-remote-file"){
+    githubSyncBadge.textContent = "☁ GitHub: файл ещё не создан";
+  }else if(state === "error"){
+    githubSyncBadge.textContent = "☁ GitHub: ошибка" + (detail ? " (" + detail + ")" : "");
+    githubSyncBadge.classList.add("is-error");
+  }
+}
+
+async function fetchRemoteMemorySnapshot(){
+  const token = getGithubToken();
+  const headers = {"Accept": "application/vnd.github+json"};
+  if(token) headers.Authorization = "token " + token;
+
+  const url =
+    "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO +
+    "/contents/" + GITHUB_MEMORY_PATH + "?ref=" + GITHUB_BRANCH + "&_=" + Date.now();
+
+  const response = await fetch(url, {headers, cache: "no-store"});
+
+  if(response.status === 404){
+    githubRemoteSha = null;
+    return [];
+  }
+  if(!response.ok){
+    throw new Error("HTTP " + response.status);
+  }
+
+  const data = await response.json();
+  githubRemoteSha = data.sha;
+  const parsed = JSON.parse(base64ToUtf8(data.content));
+  return Array.isArray(parsed.words) ? parsed.words.filter(Boolean) : [];
+}
+
+function mergeRemoteWords(remoteWords){
+  if(!Array.isArray(remoteWords) || !remoteWords.length) return false;
+
+  let changed = false;
+  for(const item of remoteWords){
+    if(!item || !item.word || !item.translation) continue;
+    const key = normalizeWord(item.word);
+    const existingIndex = savedWords.findIndex(x => normalizeWord(x.word) === key);
+
+    if(existingIndex === -1){
+      savedWords.push(item);
+      changed = true;
+    }else{
+      const existing = savedWords[existingIndex];
+      const existingReviewed = Number(existing.reviewed || 0);
+      const remoteReviewed = Number(item.reviewed || 0);
+      // Assume the copy with more review activity reflects the latest
+      // progress; ties keep what's already loaded locally.
+      if(remoteReviewed > existingReviewed){
+        savedWords[existingIndex] = {...existing, ...item};
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+async function syncMemoryFromGithub(){
+  updateGithubSyncBadge("syncing");
+  try{
+    const remoteWords = await fetchRemoteMemorySnapshot();
+    const changed = mergeRemoteWords(remoteWords);
+
+    if(changed){
+      saveLearningMemoryLocal();
+      injectLearningWordsIntoDictionary();
+      renderDictionary();
+      refreshMissingWordMarks();
+      updateWordCount();
+    }
+
+    if(getGithubToken()){
+      updateGithubSyncBadge(githubRemoteSha ? "synced" : "no-remote-file");
+    }else{
+      updateGithubSyncBadge("read-only");
+    }
+  }catch(error){
+    console.error(error);
+    updateGithubSyncBadge("error", error.message);
+  }
+}
+
+async function putMemoryToGithub(token){
+  const payload = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    words: savedWords
+  };
+
+  const body = {
+    message: "Update learning memory (" + savedWords.length + " words)",
+    content: utf8ToBase64(JSON.stringify(payload, null, 2)),
+    branch: GITHUB_BRANCH
+  };
+  if(githubRemoteSha) body.sha = githubRemoteSha;
+
+  const url =
+    "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO +
+    "/contents/" + GITHUB_MEMORY_PATH;
+
+  return fetch(url, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      Authorization: "token " + token
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+async function pushMemoryToGithub(){
+  const token = getGithubToken();
+  if(!token){
+    updateGithubSyncBadge("read-only");
+    return;
+  }
+
+  if(githubSyncInFlight){
+    githubSyncQueued = true;
+    return;
+  }
+
+  githubSyncInFlight = true;
+  updateGithubSyncBadge("syncing");
+
+  try{
+    let response = await putMemoryToGithub(token);
+
+    if(response.status === 409){
+      // Someone else (another browser) saved in the meantime; refresh
+      // the sha we know about and retry once with our current words.
+      await fetchRemoteMemorySnapshot();
+      response = await putMemoryToGithub(token);
+    }
+
+    if(!response.ok){
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.message || ("HTTP " + response.status));
+    }
+
+    const result = await response.json();
+    githubRemoteSha = result.content.sha;
+    updateGithubSyncBadge("synced");
+  }catch(error){
+    console.error(error);
+    updateGithubSyncBadge("error", error.message);
+  }finally{
+    githubSyncInFlight = false;
+    if(githubSyncQueued){
+      githubSyncQueued = false;
+      pushMemoryToGithub();
+    }
+  }
+}
+
+/* ---------- GitHub sync modal ---------- */
+
+const githubModalOverlay = document.getElementById("githubModalOverlay");
+const githubTokenInput = document.getElementById("githubTokenInput");
+
+function openGithubModal(){
+  githubTokenInput.value = getGithubToken();
+  githubModalOverlay.classList.add("visible");
+}
+
+function closeGithubModal(){
+  githubModalOverlay.classList.remove("visible");
+}
+
+document.getElementById("githubSyncBtn").addEventListener("click", openGithubModal);
+document.getElementById("githubModalCloseBtn").addEventListener("click", closeGithubModal);
+githubModalOverlay.addEventListener("click", event => {
+  if(event.target === githubModalOverlay) closeGithubModal();
+});
+
+document.getElementById("githubTokenSaveBtn").addEventListener("click", () => {
+  const token = githubTokenInput.value.trim();
+  if(!token){
+    statusEl.textContent = "Вставь токен перед сохранением";
+    return;
+  }
+  try{
+    localStorage.setItem(GITHUB_TOKEN_KEY, token);
+  }catch(error){
+    console.error(error);
+  }
+  closeGithubModal();
+  statusEl.textContent = "Токен сохранён в этом браузере";
+  pushMemoryToGithub();
+});
+
+document.getElementById("githubTokenClearBtn").addEventListener("click", () => {
+  try{
+    localStorage.removeItem(GITHUB_TOKEN_KEY);
+  }catch(error){
+    console.error(error);
+  }
+  githubTokenInput.value = "";
+  updateGithubSyncBadge("read-only");
+  statusEl.textContent = "Токен удалён из этого браузера";
+});
 
 /* ---------- dictionary ---------- */
 
@@ -1300,8 +1594,29 @@ function jumpToWord(index){
   const pos = studyQueue.indexOf(index);
   studyPos = pos >= 0 ? pos : 0;
   setCardFlipped(false);
+  setLearningSubTab("cards");
   renderLearningTab();
 }
+
+/* ---------- learning sub-tabs: cards vs. word list ---------- */
+let learningSubTab = "cards";
+const cardsPanelEl = document.getElementById("cardsPanel");
+const listPanelEl = document.getElementById("listPanel");
+const cardsToolbarRightEl = document.getElementById("cardsToolbarRight");
+
+function setLearningSubTab(tab){
+  learningSubTab = tab;
+  document.querySelectorAll("#learningSubTabs .segmented-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.subtab === tab);
+  });
+  cardsPanelEl.classList.toggle("active", tab === "cards");
+  listPanelEl.classList.toggle("active", tab === "list");
+  cardsToolbarRightEl.style.display = tab === "cards" ? "flex" : "none";
+}
+
+document.querySelectorAll("#learningSubTabs .segmented-btn").forEach(btn => {
+  btn.addEventListener("click", () => setLearningSubTab(btn.dataset.subtab));
+});
 
 function openLearningTab(){
   workspace.classList.remove("active");
@@ -1310,6 +1625,7 @@ function openLearningTab(){
   editorTabBtn.classList.remove("active");
   learningTabBtn.classList.add("active");
   setCardFlipped(false);
+  setLearningSubTab("cards");
   renderLearningTab();
 }
 
@@ -1387,19 +1703,31 @@ document.getElementById("knowStudyBtn").addEventListener("click", () => markCurr
 
 document.addEventListener("keydown", event => {
   if(!learningView.classList.contains("active")) return;
+  if(learningSubTab !== "cards") return;
   const tag = document.activeElement && document.activeElement.tagName;
   if(tag === "INPUT" || tag === "TEXTAREA") return;
 
-  if(event.code === "Space"){
-    event.preventDefault();
-    toggleCardFlip();
-  }else if(event.key === "ArrowRight"){
-    goToNextCard();
-  }else if(event.key === "ArrowLeft"){
+  const key = event.key.toLowerCase();
+
+  if(key === "w"){
+    // Show translation.
+    setCardFlipped(true);
+  }else if(key === "s"){
+    // Hide translation.
+    setCardFlipped(false);
+  }else if(key === "a"){
+    // Previous word.
     goToPrevCard();
-  }else if(event.key.toLowerCase() === "k"){
+  }else if(key === "d"){
+    // Next word.
+    goToNextCard();
+  }else if(event.key === "Enter"){
+    // Move the word to the "know" pile.
+    event.preventDefault();
     markCurrentCard(true);
-  }else if(event.key.toLowerCase() === "r"){
+  }else if(event.code === "Space"){
+    // Move the word to the "repeat" pile.
+    event.preventDefault();
     markCurrentCard(false);
   }
 });
@@ -1794,6 +2122,7 @@ loadLocalDictionary().then(() => {
   refreshMissingWordMarks();
   updateWordCount();
 });
+syncMemoryFromGithub();
 </script>
 </body>
 </html>
