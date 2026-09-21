@@ -125,7 +125,28 @@ button:active{transform:translateY(1px)}
 .learning-word-progress{font-size:11px;color:var(--muted);white-space:nowrap}
 .learning-word-progress.is-known{color:var(--green)}
 .learning-empty{color:var(--muted);padding:26px 16px;font-size:13px;line-height:1.6}
+.level-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.level-chip{border:1px solid var(--line);background:var(--panel-2);color:var(--text-dim);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:600}
+.level-chip:hover{background:#262b31;border-color:#3a4149;color:var(--text)}
+.level-chip.active{background:var(--accent);border-color:var(--accent);color:#10151c}
+.grammar-main{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:24px;align-items:start}
+.grammar-list{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);overflow-y:auto;max-height:70vh}
+.grammar-rule-item{padding:12px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer}
+.grammar-rule-item:last-child{border-bottom:0}
+.grammar-rule-item:hover{background:var(--panel-2)}
+.grammar-rule-item.is-current{background:var(--accent-dim)}
+.grammar-detail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;min-height:320px}
+.grammar-detail-category{font-size:11px;color:var(--accent-strong);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.grammar-detail-title{font-size:24px;font-weight:700;color:var(--heading);margin-bottom:16px;letter-spacing:-.01em}
+.grammar-detail-explanation{font-size:15px;line-height:1.7;color:var(--text-dim);margin-bottom:24px}
+.grammar-examples{display:flex;flex-direction:column;gap:10px}
+.grammar-example{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--radius);padding:12px 14px}
+.grammar-example-de{color:var(--heading);font-weight:600;font-size:15px}
+.grammar-example-ru{color:var(--muted);font-size:13px;margin-top:4px}
+.grammar-empty{color:var(--muted);padding:26px;font-size:13px}
 @media(max-width:800px){
+  .grammar-main{grid-template-columns:1fr}
+  .grammar-list{max-height:none}
   .workspace{grid-template-columns:1fr}.translation-column{display:none}
   .learning-main{grid-template-columns:1fr}
   .learning-view{padding:22px 18px 60px}
@@ -144,6 +165,7 @@ button:active{transform:translateY(1px)}
     <button class="btn primary" id="saveBtn">Сохранить</button>
     <button class="btn tab-btn active" id="editorTabBtn">Редактор</button>
     <button class="btn tab-btn" id="learningTabBtn">Обучение</button>
+    <button class="btn tab-btn" id="grammarTabBtn">Грамматика</button>
     <span class="autosave-badge" id="autosaveBadge">● Память ещё не сохранялась</span>
     <span class="autosave-badge" id="githubSyncBadge" title="Статус синхронизации карточек с репозиторием на GitHub">☁ GitHub: проверка...</span>
     <button class="btn" id="memoryBtn" title="Необязательно: локальная память сохраняется в браузере автоматически. Файл — это просто резервная копия.">Резервная копия в файл</button>
@@ -237,6 +259,25 @@ button:active{transform:translateY(1px)}
   </div>
 </section>
 
+<section class="view learning-view grammar-view" id="grammarView">
+  <div class="learning-head">
+    <div>
+      <div class="learning-title">Грамматика</div>
+      <div class="learning-subtitle">Правила и примеры по уровням A1–C2</div>
+    </div>
+  </div>
+
+  <div class="level-chips" id="grammarLevels"></div>
+
+  <div class="grammar-main">
+    <div class="grammar-list">
+      <div class="learning-list-head">Правила</div>
+      <div id="grammarRuleList"></div>
+    </div>
+    <div class="grammar-detail" id="grammarDetail"></div>
+  </div>
+</section>
+
 <footer class="statusbar">
   <span id="status">Загрузка словаря...</span>
   <span id="wordCount">0 слов</span>
@@ -326,6 +367,8 @@ const workspace = document.getElementById("workspace");
 const learningView = document.getElementById("learningView");
 const editorTabBtn = document.getElementById("editorTabBtn");
 const learningTabBtn = document.getElementById("learningTabBtn");
+const grammarTabBtn = document.getElementById("grammarTabBtn");
+const grammarView = document.getElementById("grammarView");
 const learningListEl = document.getElementById("learningList");
 const learningStatsEl = document.getElementById("learningStats");
 const studyWordEl = document.getElementById("studyWord");
@@ -1771,11 +1814,119 @@ document.querySelectorAll("#learningSubTabs .segmented-btn").forEach(btn => {
   btn.addEventListener("click", () => setLearningSubTab(btn.dataset.subtab));
 });
 
-function openLearningTab(){
+/* ---------- grammar tab ---------- */
+let grammarData = {levels: [], rules: []};
+let grammarLevel = null;
+let grammarRuleId = null;
+
+async function loadGrammarData(){
+  try{
+    const response = await fetch("data/grammar.json", {cache: "no-store"});
+    if(!response.ok) throw new Error("HTTP " + response.status);
+    const data = await response.json();
+    grammarData = {
+      levels: Array.isArray(data.levels) ? data.levels : [],
+      rules: Array.isArray(data.rules) ? data.rules : []
+    };
+    if(grammarData.levels.length) grammarLevel = grammarData.levels[0].id;
+  }catch(error){
+    console.error(error);
+    grammarData = {levels: [], rules: []};
+  }
+
+  if(grammarView.classList.contains("active")){
+    renderGrammarLevels();
+    renderGrammarRuleList();
+    renderGrammarDetail();
+  }
+}
+
+function grammarRulesForLevel(level){
+  return grammarData.rules.filter(rule => rule.level === level);
+}
+
+function renderGrammarLevels(){
+  const container = document.getElementById("grammarLevels");
+  container.innerHTML = grammarData.levels.map(level => `
+    <button class="level-chip${level.id === grammarLevel ? " active" : ""}" type="button" data-level="${escapeHtml(level.id)}">${escapeHtml(level.label || level.id)}</button>
+  `).join("");
+
+  container.querySelectorAll(".level-chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      grammarLevel = btn.dataset.level;
+      grammarRuleId = null;
+      renderGrammarLevels();
+      renderGrammarRuleList();
+      renderGrammarDetail();
+    });
+  });
+}
+
+function renderGrammarRuleList(){
+  const listEl = document.getElementById("grammarRuleList");
+  const rules = grammarRulesForLevel(grammarLevel);
+  if(!grammarRuleId || !rules.some(rule => rule.id === grammarRuleId)){
+    grammarRuleId = rules.length ? rules[0].id : null;
+  }
+
+  if(!rules.length){
+    listEl.innerHTML = '<div class="learning-empty">Для этого уровня пока нет правил.</div>';
+    return;
+  }
+
+  listEl.innerHTML = rules.map(rule => `
+    <div class="grammar-rule-item${rule.id === grammarRuleId ? " is-current" : ""}" data-rule-id="${escapeHtml(rule.id)}">
+      <div class="learning-word-name">${escapeHtml(rule.title)}</div>
+      <div class="learning-word-translation">${escapeHtml(rule.category || "")}</div>
+    </div>
+  `).join("");
+
+  listEl.querySelectorAll("[data-rule-id]").forEach(el => {
+    el.addEventListener("click", () => {
+      grammarRuleId = el.dataset.ruleId;
+      renderGrammarRuleList();
+      renderGrammarDetail();
+    });
+  });
+}
+
+function renderGrammarDetail(){
+  const detailEl = document.getElementById("grammarDetail");
+  const rule = grammarData.rules.find(r => r.id === grammarRuleId);
+
+  if(!rule){
+    detailEl.innerHTML = '<div class="grammar-empty">Для этого уровня пока нет правил.</div>';
+    return;
+  }
+
+  detailEl.innerHTML = `
+    <div class="grammar-detail-category">${escapeHtml(rule.level)} · ${escapeHtml(rule.category || "")}</div>
+    <div class="grammar-detail-title">${escapeHtml(rule.title)}</div>
+    <div class="grammar-detail-explanation">${escapeHtml(rule.explanation || "")}</div>
+    <div class="grammar-examples">
+      ${(rule.examples || []).map(example => `
+        <div class="grammar-example">
+          <div class="grammar-example-de">${escapeHtml(example.de || "")}</div>
+          <div class="grammar-example-ru">${escapeHtml(example.ru || "")}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function hideAllTabs(){
   workspace.classList.remove("active");
   workspace.style.display = "none";
-  learningView.classList.add("active");
+  learningView.classList.remove("active");
+  grammarView.classList.remove("active");
   editorTabBtn.classList.remove("active");
+  learningTabBtn.classList.remove("active");
+  grammarTabBtn.classList.remove("active");
+}
+
+function openLearningTab(){
+  hideAllTabs();
+  learningView.classList.add("active");
   learningTabBtn.classList.add("active");
   setCardFlipped(false);
   setLearningSubTab("cards");
@@ -1783,14 +1934,23 @@ function openLearningTab(){
 }
 
 function openEditorTab(){
-  learningView.classList.remove("active");
+  hideAllTabs();
   workspace.style.display = "grid";
   editorTabBtn.classList.add("active");
-  learningTabBtn.classList.remove("active");
+}
+
+function openGrammarTab(){
+  hideAllTabs();
+  grammarView.classList.add("active");
+  grammarTabBtn.classList.add("active");
+  renderGrammarLevels();
+  renderGrammarRuleList();
+  renderGrammarDetail();
 }
 
 editorTabBtn.addEventListener("click", openEditorTab);
 learningTabBtn.addEventListener("click", openLearningTab);
+grammarTabBtn.addEventListener("click", openGrammarTab);
 
 flipCardEl.addEventListener("click", toggleCardFlip);
 
@@ -2316,6 +2476,7 @@ loadLocalDictionary().then(() => {
 });
 syncMemoryFromGithub();
 syncCustomDictionaryFromGithub();
+loadGrammarData();
 </script>
 </body>
 </html>

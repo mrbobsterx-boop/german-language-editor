@@ -1,0 +1,361 @@
+{
+  "levels": [
+    {"id": "A1", "label": "A1"},
+    {"id": "A2", "label": "A2"},
+    {"id": "B1", "label": "B1"},
+    {"id": "B2", "label": "B2"},
+    {"id": "C1", "label": "C1"},
+    {"id": "C2", "label": "C2"}
+  ],
+  "rules": [
+    {
+      "id": "a1-artikel",
+      "level": "A1",
+      "category": "Существительные",
+      "title": "Артикли der/die/das",
+      "explanation": "У каждого немецкого существительного есть род — мужской (der), женский (die) или средний (das). Род не всегда предсказуем по смыслу слова, поэтому его нужно запоминать вместе со словом. Во множественном числе для всех родов используется один артикль — die.",
+      "examples": [
+        {"de": "der Tisch", "ru": "стол (мужской род)"},
+        {"de": "die Lampe", "ru": "лампа (женский род)"},
+        {"de": "das Buch", "ru": "книга (средний род)"},
+        {"de": "die Bücher", "ru": "книги (множественное число)"}
+      ]
+    },
+    {
+      "id": "a1-praesens",
+      "level": "A1",
+      "category": "Глаголы",
+      "title": "Präsens — настоящее время",
+      "explanation": "Глагол изменяется по лицам и числам: к основе добавляется окончание. Стандартные окончания: -e, -st, -t, -en, -t, -en для ich, du, er/sie/es, wir, ihr, sie/Sie.",
+      "examples": [
+        {"de": "ich mache", "ru": "я делаю"},
+        {"de": "du machst", "ru": "ты делаешь"},
+        {"de": "wir machen", "ru": "мы делаем"}
+      ]
+    },
+    {
+      "id": "a1-sein-haben",
+      "level": "A1",
+      "category": "Глаголы",
+      "title": "Sein и haben",
+      "explanation": "Это два самых важных неправильных глагола немецкого языка. Они используются не только сами по себе, но и как вспомогательные для образования других времён (Perfekt).",
+      "examples": [
+        {"de": "ich bin, du bist, er ist", "ru": "я есть, ты есть, он есть"},
+        {"de": "ich habe, du hast, er hat", "ru": "у меня есть, у тебя есть, у него есть"},
+        {"de": "Ich bin müde. Ich habe Hunger.", "ru": "Я устал(а). Я хочу есть."}
+      ]
+    },
+    {
+      "id": "a1-wortstellung",
+      "level": "A1",
+      "category": "Синтаксис",
+      "title": "Глагол на втором месте",
+      "explanation": "В повествовательном предложении спрягаемый глагол всегда стоит на втором месте — даже если первую позицию занимает не подлежащее, а, например, обстоятельство времени.",
+      "examples": [
+        {"de": "Ich lerne heute Deutsch.", "ru": "Я учу сегодня немецкий."},
+        {"de": "Heute lerne ich Deutsch.", "ru": "Сегодня я учу немецкий."},
+        {"de": "Morgen gehe ich ins Kino.", "ru": "Завтра я иду в кино."}
+      ]
+    },
+    {
+      "id": "a1-negation",
+      "level": "A1",
+      "category": "Отрицание",
+      "title": "Nicht и kein",
+      "explanation": "Kein используется для отрицания существительных с неопределённым артиклем или без артикля. Nicht отрицает глаголы, прилагательные и всё остальное.",
+      "examples": [
+        {"de": "Ich habe kein Auto.", "ru": "У меня нет машины."},
+        {"de": "Das ist kein Problem.", "ru": "Это не проблема."},
+        {"de": "Ich verstehe das nicht.", "ru": "Я это не понимаю."}
+      ]
+    },
+    {
+      "id": "a1-w-fragen",
+      "level": "A1",
+      "category": "Синтаксис",
+      "title": "Вопросительные слова (W-Fragen)",
+      "explanation": "Wer, was, wo, wann, warum, wie, welche — вопросительное слово стоит на первом месте, а спрягаемый глагол сразу на втором.",
+      "examples": [
+        {"de": "Wo wohnst du?", "ru": "Где ты живёшь?"},
+        {"de": "Wann beginnt der Film?", "ru": "Когда начинается фильм?"},
+        {"de": "Warum lernst du Deutsch?", "ru": "Почему ты учишь немецкий?"}
+      ]
+    },
+    {
+      "id": "a2-perfekt",
+      "level": "A2",
+      "category": "Глаголы",
+      "title": "Perfekt — разговорное прошедшее",
+      "explanation": "Образуется вспомогательным глаголом haben или sein (в настоящем времени) + Partizip II смыслового глагола, который уходит в конец предложения. Sein берут глаголы движения и изменения состояния.",
+      "examples": [
+        {"de": "Ich habe gegessen.", "ru": "Я поел(а)."},
+        {"de": "Ich bin gegangen.", "ru": "Я пошёл/пошла."},
+        {"de": "Wir haben einen Film gesehen.", "ru": "Мы посмотрели фильм."}
+      ]
+    },
+    {
+      "id": "a2-modalverben",
+      "level": "A2",
+      "category": "Глаголы",
+      "title": "Модальные глаголы",
+      "explanation": "Können (мочь), müssen (быть должным), wollen (хотеть), dürfen (иметь разрешение), sollen (следует), mögen (нравиться) спрягаются нерегулярно. Смысловой глагол ставится в инфинитив и уходит в конец предложения.",
+      "examples": [
+        {"de": "Ich kann gut schwimmen.", "ru": "Я хорошо умею плавать."},
+        {"de": "Du musst jetzt gehen.", "ru": "Тебе нужно сейчас идти."},
+        {"de": "Wir wollen ins Kino gehen.", "ru": "Мы хотим пойти в кино."}
+      ]
+    },
+    {
+      "id": "a2-adjektivdeklination",
+      "level": "A2",
+      "category": "Прилагательные",
+      "title": "Склонение прилагательных",
+      "explanation": "Окончание прилагательного перед существительным зависит от рода, числа, падежа и того, какой артикль стоит перед ним — определённый, неопределённый или отсутствие артикля.",
+      "examples": [
+        {"de": "der neue Tisch", "ru": "новый стол (определённый артикль)"},
+        {"de": "ein neuer Tisch", "ru": "новый стол (неопределённый артикль)"},
+        {"de": "neue Tische", "ru": "новые столы (без артикля, мн. число)"}
+      ]
+    },
+    {
+      "id": "a2-wechselpraepositionen",
+      "level": "A2",
+      "category": "Падежи",
+      "title": "Предлоги места (Wechselpräpositionen)",
+      "explanation": "In, an, auf, über, unter, vor, hinter, neben, zwischen требуют Akkusativ на вопрос «куда?» (движение, смена места) и Dativ на вопрос «где?» (нахождение на месте).",
+      "examples": [
+        {"de": "Ich lege das Buch auf den Tisch.", "ru": "Я кладу книгу на стол (Akkusativ, куда)."},
+        {"de": "Das Buch liegt auf dem Tisch.", "ru": "Книга лежит на столе (Dativ, где)."},
+        {"de": "Sie geht in die Schule.", "ru": "Она идёт в школу (Akkusativ)."}
+      ]
+    },
+    {
+      "id": "a2-komparation",
+      "level": "A2",
+      "category": "Прилагательные",
+      "title": "Степени сравнения",
+      "explanation": "Сравнительная степень образуется добавлением -er, превосходная — am + -sten. У многих прилагательных гласная в корне получает умлаут.",
+      "examples": [
+        {"de": "klein — kleiner — am kleinsten", "ru": "маленький — меньше — самый маленький"},
+        {"de": "groß — größer — am größten", "ru": "большой — больше — самый большой"},
+        {"de": "gut — besser — am besten", "ru": "хороший — лучше — самый лучший (исключение)"}
+      ]
+    },
+    {
+      "id": "a2-reflexiv",
+      "level": "A2",
+      "category": "Глаголы",
+      "title": "Возвратные глаголы",
+      "explanation": "Используются с возвратным местоимением (mich, dich, sich, uns, euch, sich), которое согласуется с подлежащим по лицу и числу.",
+      "examples": [
+        {"de": "Ich freue mich.", "ru": "Я радуюсь."},
+        {"de": "Du freust dich.", "ru": "Ты радуешься."},
+        {"de": "Sie erinnert sich an ihn.", "ru": "Она вспоминает о нём."}
+      ]
+    },
+    {
+      "id": "b1-praeteritum",
+      "level": "B1",
+      "category": "Глаголы",
+      "title": "Präteritum — простое прошедшее",
+      "explanation": "Используется в основном в письменной речи и рассказах. Для sein, haben и модальных глаголов употребляется обязательно даже в устной речи.",
+      "examples": [
+        {"de": "ich war, du warst", "ru": "я был(а), ты был(а)"},
+        {"de": "ich hatte", "ru": "у меня было"},
+        {"de": "Es regnete den ganzen Tag.", "ru": "Весь день шёл дождь."}
+      ]
+    },
+    {
+      "id": "b1-nebensaetze",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Придаточные с weil, dass, wenn",
+      "explanation": "В придаточном предложении спрягаемый глагол уходит в самый конец. Weil — потому что, dass — что, wenn — если/когда.",
+      "examples": [
+        {"de": "Ich bleibe zu Hause, weil ich krank bin.", "ru": "Я остаюсь дома, потому что я болею."},
+        {"de": "Ich glaube, dass er recht hat.", "ru": "Я думаю, что он прав."},
+        {"de": "Wenn ich Zeit habe, rufe ich dich an.", "ru": "Если у меня будет время, я тебе позвоню."}
+      ]
+    },
+    {
+      "id": "b1-passiv",
+      "level": "B1",
+      "category": "Глаголы",
+      "title": "Passiv — пассивный залог",
+      "explanation": "Образуется с werden + Partizip II смыслового глагола. Действующее лицо, если оно упоминается, вводится через von + Dativ.",
+      "examples": [
+        {"de": "Das Haus wird gebaut.", "ru": "Дом строится."},
+        {"de": "Der Brief wurde geschrieben.", "ru": "Письмо было написано."},
+        {"de": "Das Fenster wird von ihm geöffnet.", "ru": "Окно открывается им."}
+      ]
+    },
+    {
+      "id": "b1-konjunktiv2",
+      "level": "B1",
+      "category": "Глаголы",
+      "title": "Konjunktiv II — вежливость и гипотезы",
+      "explanation": "Используется для вежливых просьб, пожеланий и нереальных/гипотетических условий. Для большинства глаголов образуется через würde + инфинитив.",
+      "examples": [
+        {"de": "Ich hätte gern einen Kaffee.", "ru": "Я хотел(а) бы кофе."},
+        {"de": "Wenn ich Zeit hätte, würde ich kommen.", "ru": "Если бы у меня было время, я бы пришёл."},
+        {"de": "Könntest du mir helfen?", "ru": "Не мог бы ты мне помочь?"}
+      ]
+    },
+    {
+      "id": "b1-relativsaetze",
+      "level": "B1",
+      "category": "Синтаксис",
+      "title": "Relativsätze — относительные придаточные",
+      "explanation": "Относительное местоимение (der, die, das в нужном падеже) вводит придаточное; глагол уходит в конец. Местоимение согласуется в роде/числе с определяемым словом, а в падеже — со своей ролью в придаточном.",
+      "examples": [
+        {"de": "Der Mann, der dort steht, ist mein Lehrer.", "ru": "Мужчина, который там стоит, — мой учитель."},
+        {"de": "Das Buch, das ich lese, ist interessant.", "ru": "Книга, которую я читаю, интересная."},
+        {"de": "Die Frau, der ich geholfen habe, ist meine Nachbarin.", "ru": "Женщина, которой я помог, — моя соседка."}
+      ]
+    },
+    {
+      "id": "b1-genitiv",
+      "level": "B1",
+      "category": "Падежи",
+      "title": "Genitiv — родительный падеж",
+      "explanation": "Падеж принадлежности, отвечает на вопрос «чей?». В разговорной речи часто заменяется конструкцией von + Dativ.",
+      "examples": [
+        {"de": "das Auto meines Vaters", "ru": "машина моего отца"},
+        {"de": "die Farbe des Himmels", "ru": "цвет неба"},
+        {"de": "trotz des Regens", "ru": "несмотря на дождь"}
+      ]
+    },
+    {
+      "id": "b2-konjunktiv1",
+      "level": "B2",
+      "category": "Глаголы",
+      "title": "Konjunktiv I — косвенная речь",
+      "explanation": "Используется в основном в новостях и официальных пересказах чужих слов, чтобы показать дистанцию говорящего от пересказываемого высказывания.",
+      "examples": [
+        {"de": "Er sagt, er sei müde.", "ru": "Он говорит, что устал."},
+        {"de": "Sie behauptet, sie habe keine Zeit.", "ru": "Она утверждает, что у неё нет времени."},
+        {"de": "Der Minister erklärte, die Lage sei stabil.", "ru": "Министр заявил, что ситуация стабильна."}
+      ]
+    },
+    {
+      "id": "b2-passiv-modal",
+      "level": "B2",
+      "category": "Глаголы",
+      "title": "Пассив с модальными глаголами",
+      "explanation": "Модальный глагол спрягается, а Partizip II смыслового глагола + werden (в инфинитиве) уходят в конец предложения.",
+      "examples": [
+        {"de": "Das muss gemacht werden.", "ru": "Это нужно сделать."},
+        {"de": "Die Aufgabe kann gelöst werden.", "ru": "Задачу можно решить."},
+        {"de": "Das Problem sollte schnell gelöst werden.", "ru": "Проблему следовало бы решить быстро."}
+      ]
+    },
+    {
+      "id": "b2-doppelkonjunktionen",
+      "level": "B2",
+      "category": "Синтаксис",
+      "title": "Двойные союзы",
+      "explanation": "Sowohl...als auch (как…так и), entweder...oder (или…или), weder...noch (ни…ни), je...desto (чем…тем) связывают части предложения по фиксированной схеме.",
+      "examples": [
+        {"de": "Sie spricht sowohl Deutsch als auch Englisch.", "ru": "Она говорит как по-немецки, так и по-английски."},
+        {"de": "Je mehr ich lerne, desto besser verstehe ich.", "ru": "Чем больше я учу, тем лучше понимаю."},
+        {"de": "Weder er noch sie war da.", "ru": "Ни его, ни её там не было."}
+      ]
+    },
+    {
+      "id": "b2-partizipialkonstruktionen",
+      "level": "B2",
+      "category": "Синтаксис",
+      "title": "Причастные обороты",
+      "explanation": "Partizip I (-end) выражает одновременное действие, Partizip II — уже совершённое. Обороты с ними используются вместо придаточных для краткости, особенно в письменном стиле.",
+      "examples": [
+        {"de": "Lachend verließ sie den Raum.", "ru": "Смеясь, она вышла из комнаты."},
+        {"de": "Die geschriebene Arbeit war sehr gut.", "ru": "Написанная работа была очень хорошей."},
+        {"de": "Aus dem Fenster schauend, sah er den Regen.", "ru": "Глядя в окно, он видел дождь."}
+      ]
+    },
+    {
+      "id": "b2-nominalisierung",
+      "level": "B2",
+      "category": "Стиль",
+      "title": "Номинализация глаголов",
+      "explanation": "Инфинитив с приставкой das-/beim-/zum- превращается в существительное среднего рода. Это типично для официального и научного стиля.",
+      "examples": [
+        {"de": "beim Lesen", "ru": "во время чтения"},
+        {"de": "das Verstehen", "ru": "понимание"},
+        {"de": "durch das Üben", "ru": "через тренировку"}
+      ]
+    },
+    {
+      "id": "c1-partizipialattribute",
+      "level": "C1",
+      "category": "Синтаксис",
+      "title": "Расширенные причастные определения",
+      "explanation": "Причастие с зависимыми словами ставится перед существительным, образуя компактную конструкцию, типичную для научного и публицистического стиля — вместо целого придаточного предложения.",
+      "examples": [
+        {"de": "der gestern von mir gelesene Artikel", "ru": "статья, прочитанная мной вчера"},
+        {"de": "die immer schneller wachsende Stadt", "ru": "постоянно быстрее растущий город"},
+        {"de": "das lange erwartete Ergebnis", "ru": "долгожданный результат"}
+      ]
+    },
+    {
+      "id": "c1-modalpartikeln",
+      "level": "C1",
+      "category": "Стиль",
+      "title": "Модальные частицы",
+      "explanation": "Слова вроде doch, ja, mal, eben, halt, eigentlich почти не переводятся дословно, но передают отношение говорящего — раздражение, удивление, смягчение просьбы.",
+      "examples": [
+        {"de": "Das ist doch klar!", "ru": "Это же очевидно!"},
+        {"de": "Komm mal her.", "ru": "Иди-ка сюда."},
+        {"de": "Das ist eben so.", "ru": "Так уж вышло, ничего не поделаешь."}
+      ]
+    },
+    {
+      "id": "c1-konnektoren",
+      "level": "C1",
+      "category": "Синтаксис",
+      "title": "Коннекторы для аргументации",
+      "explanation": "Dennoch (тем не менее), folglich (следовательно), zumal (тем более что), insofern (в этом смысле) используются для построения логичного, связного аргументативного текста.",
+      "examples": [
+        {"de": "Es regnete stark, dennoch gingen wir spazieren.", "ru": "Шёл сильный дождь, тем не менее мы пошли гулять."},
+        {"de": "Er war krank, folglich blieb er zu Hause.", "ru": "Он был болен, следовательно остался дома."},
+        {"de": "Zumal er müde war, ging er früh schlafen.", "ru": "Тем более что он устал, он рано лёг спать."}
+      ]
+    },
+    {
+      "id": "c2-stilregister",
+      "level": "C2",
+      "category": "Стиль",
+      "title": "Стилистические регистры речи",
+      "explanation": "На уровне C2 важно различать разговорный, нейтральный и высокий/канцелярский стиль, подбирая лексику и конструкции под конкретную ситуацию общения.",
+      "examples": [
+        {"de": "Kannst du mir helfen? / Wären Sie so freundlich, mir zu helfen?", "ru": "нейтрально / подчёркнуто вежливо-формально"},
+        {"de": "Das ist echt cool! / Das ist außerordentlich beeindruckend.", "ru": "разговорное / высокий стиль"},
+        {"de": "kriegen / erhalten", "ru": "получать (разговорное) / получать (нейтрально-письменное)"}
+      ]
+    },
+    {
+      "id": "c2-idiome",
+      "level": "C2",
+      "category": "Лексика",
+      "title": "Устойчивые идиоматические выражения",
+      "explanation": "Идиомы нельзя переводить дословно — их значение усваивается целиком, как единая неразложимая единица смысла.",
+      "examples": [
+        {"de": "die Katze im Sack kaufen", "ru": "покупать кота в мешке"},
+        {"de": "ins Wasser fallen", "ru": "сорваться, не состояться (о планах)"},
+        {"de": "jemandem einen Bären aufbinden", "ru": "вешать кому-то лапшу на уши"}
+      ]
+    },
+    {
+      "id": "c2-literarischer-konjunktiv",
+      "level": "C2",
+      "category": "Стиль",
+      "title": "Литературный Konjunktiv и архаичные формы",
+      "explanation": "В литературных и возвышенных текстах встречаются устаревшие формы Konjunktiv и инверсии, редко используемые в повседневной речи.",
+      "examples": [
+        {"de": "Möge er glücklich sein.", "ru": "Пусть он будет счастлив."},
+        {"de": "Es sei denn, er kommt doch noch.", "ru": "Разве что он всё же придёт."},
+        {"de": "Wäre dem so, hätten wir gewonnen.", "ru": "Будь оно так, мы бы выиграли."}
+      ]
+    }
+  ]
+}
