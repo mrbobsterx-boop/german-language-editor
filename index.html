@@ -80,6 +80,12 @@ button:active{transform:translateY(1px)}
 .practice-match{background:rgba(91,141,239,.22);border-radius:3px;padding:1px 2px;color:var(--accent-strong);font-weight:600}
 .dictionary-delete{flex:0 0 auto;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:var(--radius-sm);padding:5px 9px;font-size:11px}
 .dictionary-delete:hover{background:#33262a;color:var(--red);border-color:rgba(224,133,127,.4)}
+.vocab-search{width:100%;margin-bottom:14px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 14px;font-size:16px;font-family:inherit}
+.vocab-search:focus{outline:none;border-color:var(--accent)}
+.vocab-filters{padding:0 0 16px;border-bottom:none}
+.vocab-list-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.vocab-add-btn.is-added{color:var(--green);border-color:rgba(95,185,140,.35);cursor:default}
+.vocab-add-btn.is-added:hover{background:var(--panel-2)}
 .annotation{display:inline;background:var(--accent-dim);border-bottom:1px solid var(--accent);border-radius:2px;padding:1px 2px}
 .active-word{background:rgba(91,141,239,.35);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.4)}
 .hover-word{background:rgba(91,141,239,.18);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.2)}
@@ -199,7 +205,7 @@ button:active{transform:translateY(1px)}
   .mobile-menu-btn{display:inline-flex;margin-left:auto}
   .mobile-view-switch.active-tab{display:inline-flex;margin:10px 12px 0}
 
-  #editorTabBtn,#learningTabBtn,#grammarTabBtn{display:none}
+  #editorTabBtn,#learningTabBtn,#grammarTabBtn,#vocabTabBtn{display:none}
   .statusbar{display:none}
   .bottom-nav{display:flex;flex:none;border-top:1px solid var(--line);background:var(--bg-soft);padding-bottom:env(safe-area-inset-bottom)}
 }
@@ -215,6 +221,7 @@ button:active{transform:translateY(1px)}
     <button class="btn tab-btn active" id="editorTabBtn">Редактор</button>
     <button class="btn tab-btn" id="learningTabBtn">Обучение</button>
     <button class="btn tab-btn" id="grammarTabBtn">Грамматика</button>
+    <button class="btn tab-btn" id="vocabTabBtn">Словарь</button>
     <span class="autosave-badge" id="autosaveBadge">● Память ещё не сохранялась</span>
     <span class="autosave-badge" id="githubSyncBadge" title="Статус синхронизации карточек с репозиторием на GitHub">☁ GitHub: проверка...</span>
     <button class="btn" id="memoryBtn" title="Необязательно: локальная память сохраняется в браузере автоматически. Файл — это просто резервная копия.">Резервная копия в файл</button>
@@ -366,6 +373,32 @@ button:active{transform:translateY(1px)}
   </div>
 </section>
 
+<section class="view learning-view" id="vocabView">
+  <div class="learning-head">
+    <div>
+      <div class="learning-title">Словарь</div>
+      <div class="learning-subtitle">Полный словарь FreeDict DE→RU — находи слова и добавляй их в карточки для обучения</div>
+    </div>
+    <div class="learning-stats" id="vocabStatus">0 слов</div>
+  </div>
+
+  <input type="text" id="vocabSearchInput" class="vocab-search" placeholder="Поиск по-немецки или по-русски...">
+
+  <div class="dictionary-filters vocab-filters" id="vocabFilters">
+    <button class="filter-chip active" type="button" data-category="noun">Существительные</button>
+    <button class="filter-chip active" type="button" data-category="verb">Глаголы</button>
+    <button class="filter-chip active" type="button" data-category="adjective">Прилагательные</button>
+    <button class="filter-chip active" type="button" data-category="pronoun">Местоимения</button>
+    <button class="filter-chip active" type="button" data-category="adverb">Наречия</button>
+    <button class="filter-chip active" type="button" data-category="function">Служебные слова</button>
+    <button class="filter-chip active" type="button" data-category="other">Другое</button>
+  </div>
+
+  <div class="vocab-list-wrap">
+    <div id="vocabList" class="dictionary-list"></div>
+  </div>
+</section>
+
 <footer class="statusbar">
   <span id="status">Загрузка словаря...</span>
   <span id="wordCount">0 слов</span>
@@ -383,6 +416,10 @@ button:active{transform:translateY(1px)}
   <button class="bottom-nav-btn" type="button" data-tab="grammar">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     <span>Грамматика</span>
+  </button>
+  <button class="bottom-nav-btn" type="button" data-tab="vocab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <span>Словарь</span>
   </button>
 </nav>
 </div>
@@ -488,6 +525,8 @@ const editorTabBtn = document.getElementById("editorTabBtn");
 const learningTabBtn = document.getElementById("learningTabBtn");
 const grammarTabBtn = document.getElementById("grammarTabBtn");
 const grammarView = document.getElementById("grammarView");
+const vocabTabBtn = document.getElementById("vocabTabBtn");
+const vocabView = document.getElementById("vocabView");
 const learningListEl = document.getElementById("learningList");
 const learningStatsEl = document.getElementById("learningStats");
 const studyWordEl = document.getElementById("studyWord");
@@ -2015,6 +2054,114 @@ function renderDictionary(){
   });
 }
 
+/* ---------- vocabulary browser (full FreeDict DE->RU dictionary) ---------- */
+
+let activeVocabCategories = new Set(WORD_CATEGORIES);
+let vocabSearchQuery = "";
+const VOCAB_RESULT_LIMIT = 150;
+
+// customDictionary entries win over localDictionary for the same key,
+// matching lookupDirect()'s priority; localDictionary is huge (26k+),
+// so this walks it in place instead of copying it into a merged Map.
+function* iterateAllDictionaryEntries(){
+  const seen = new Set();
+  for(const [key, entry] of customDictionary){
+    seen.add(key);
+    yield [key, entry];
+  }
+  for(const [key, entry] of localDictionary){
+    if(!seen.has(key)) yield [key, entry];
+  }
+}
+
+function renderVocabList(){
+  const listEl = document.getElementById("vocabList");
+  const statusEl2 = document.getElementById("vocabStatus");
+  const query = vocabSearchQuery.trim().toLowerCase();
+
+  const matches = [];
+  for(const [key, entry] of iterateAllDictionaryEntries()){
+    if(!activeVocabCategories.has(classifyWordCategory(entry))) continue;
+    if(query){
+      const translation = normalizeTranslation(entry.translation).toLowerCase();
+      if(!key.includes(query) && !translation.includes(query)) continue;
+    }
+    matches.push(entry);
+  }
+
+  statusEl2.textContent = matches.length
+    ? matches.length.toLocaleString("ru-RU") + " слов" +
+      (matches.length > VOCAB_RESULT_LIMIT ? " · показаны первые " + VOCAB_RESULT_LIMIT : "")
+    : "Ничего не найдено";
+
+  if(!matches.length){
+    listEl.innerHTML = '<div class="dictionary-empty">Ничего не найдено. Попробуй изменить фильтры или поиск.</div>';
+    return;
+  }
+
+  const shown = matches.slice(0, VOCAB_RESULT_LIMIT);
+
+  listEl.innerHTML = shown.map(entry => {
+    const key = normalizeWord(entry.word);
+    const alreadyAdded = savedWords.some(x => normalizeWord(x.word) === key);
+    return `
+      <div class="dictionary-item">
+        <div>
+          <div class="dictionary-word">${escapeHtml(entry.word)}</div>
+          <div class="dictionary-form">${escapeHtml(entry.grammar || "")}</div>
+        </div>
+        <div class="dictionary-translation">${escapeHtml(normalizeTranslation(entry.translation))}</div>
+        <button class="dictionary-delete vocab-add-btn${alreadyAdded ? " is-added" : ""}" type="button"
+                data-vocab-key="${escapeHtml(key)}" ${alreadyAdded ? "disabled" : ""}>
+          ${alreadyAdded ? "✓ В карточках" : "+ В карточки"}
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  listEl.querySelectorAll("[data-vocab-key]").forEach(button => {
+    button.addEventListener("click", () => addWordFromVocab(button.dataset.vocabKey));
+  });
+}
+
+function addWordFromVocab(key){
+  const entry = customDictionary.get(key) || localDictionary.get(key);
+  if(!entry) return;
+
+  addToLearningMemory(buildWordInfo(entry.word, entry));
+  injectLearningWordsIntoDictionary();
+  refreshMissingWordMarks();
+  updateWordCount();
+  refreshPracticeHighlights();
+  renderVocabList();
+
+  statusEl.textContent = "«" + entry.word + "» добавлено в карточки";
+}
+
+document.querySelectorAll("#vocabFilters .filter-chip").forEach(button => {
+  button.addEventListener("click", () => {
+    const category = button.dataset.category;
+    if(activeVocabCategories.has(category)){
+      activeVocabCategories.delete(category);
+      button.classList.remove("active");
+    }else{
+      activeVocabCategories.add(category);
+      button.classList.add("active");
+    }
+    renderVocabList();
+  });
+});
+
+const vocabSearchInput = document.getElementById("vocabSearchInput");
+let vocabSearchTimer = null;
+vocabSearchInput.addEventListener("input", () => {
+  clearTimeout(vocabSearchTimer);
+  vocabSearchTimer = setTimeout(() => {
+    vocabSearchQuery = vocabSearchInput.value;
+    renderVocabList();
+  }, 200);
+});
+
 /* ---------- learning tab (flashcards) ---------- */
 let studyQueue = [];
 let studyPos = 0;
@@ -2471,9 +2618,11 @@ function hideAllTabs(){
   workspace.style.display = "none";
   learningView.classList.remove("active");
   grammarView.classList.remove("active");
+  vocabView.classList.remove("active");
   editorTabBtn.classList.remove("active");
   learningTabBtn.classList.remove("active");
   grammarTabBtn.classList.remove("active");
+  vocabTabBtn.classList.remove("active");
 }
 
 function openLearningTab(){
@@ -2503,9 +2652,18 @@ function openGrammarTab(){
   syncBottomNav("grammar");
 }
 
+function openVocabTab(){
+  hideAllTabs();
+  vocabView.classList.add("active");
+  vocabTabBtn.classList.add("active");
+  renderVocabList();
+  syncBottomNav("vocab");
+}
+
 editorTabBtn.addEventListener("click", openEditorTab);
 learningTabBtn.addEventListener("click", openLearningTab);
 grammarTabBtn.addEventListener("click", openGrammarTab);
+vocabTabBtn.addEventListener("click", openVocabTab);
 
 flipCardEl.addEventListener("click", toggleCardFlip);
 
@@ -2861,6 +3019,7 @@ document.querySelectorAll(".bottom-nav-btn").forEach(btn => {
     if(tab === "editor") openEditorTab();
     else if(tab === "learning") openLearningTab();
     else if(tab === "grammar") openGrammarTab();
+    else if(tab === "vocab") openVocabTab();
   });
 });
 
