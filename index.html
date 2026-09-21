@@ -60,6 +60,10 @@ button:active{transform:translateY(1px)}
 .dictionary-form{color:var(--muted);font-size:12px;margin-top:4px}
 .dictionary-translation{color:var(--text-dim);font-size:14px;line-height:1.4;text-align:right;max-width:52%}
 .dictionary-status{padding:9px 20px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line-soft)}
+.dictionary-filters{display:flex;gap:6px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--line-soft)}
+.filter-chip{border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600}
+.filter-chip:hover{background:#262b31;color:var(--text)}
+.filter-chip.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-strong)}
 .dictionary-delete{flex:0 0 auto;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:var(--radius-sm);padding:5px 9px;font-size:11px}
 .dictionary-delete:hover{background:#33262a;color:var(--red);border-color:rgba(224,133,127,.4)}
 .annotation{display:inline;background:var(--accent-dim);border-bottom:1px solid var(--accent);border-radius:2px;padding:1px 2px}
@@ -173,7 +177,6 @@ button:active{transform:translateY(1px)}
 <header class="topbar">
   <div class="brand">German Language Editor</div>
   <div class="toolbar">
-    <button class="btn" id="newBtn">Новый</button>
     <button class="btn" id="openBtn">Открыть</button>
     <button class="btn primary" id="saveBtn">Сохранить</button>
     <button class="btn tab-btn active" id="editorTabBtn">Редактор</button>
@@ -204,6 +207,15 @@ button:active{transform:translateY(1px)}
 
 <section class="column translation-column" id="translationColumn">
   <div class="column-header"><span>Слова</span><small>Память для обучения</small></div>
+  <div class="dictionary-filters" id="dictionaryFilters">
+    <button class="filter-chip active" type="button" data-category="noun">Существительные</button>
+    <button class="filter-chip active" type="button" data-category="verb">Глаголы</button>
+    <button class="filter-chip active" type="button" data-category="adjective">Прилагательные</button>
+    <button class="filter-chip active" type="button" data-category="pronoun">Местоимения</button>
+    <button class="filter-chip active" type="button" data-category="adverb">Наречия</button>
+    <button class="filter-chip active" type="button" data-category="function">Служебные слова</button>
+    <button class="filter-chip active" type="button" data-category="other">Другое</button>
+  </div>
   <div id="dictionaryStatus" class="dictionary-status">Загрузка словаря...</div>
   <div id="dictionaryList" class="dictionary-list">
     <div class="dictionary-empty">Сохранённые слова появятся здесь.</div>
@@ -1695,8 +1707,44 @@ document.addEventListener("scroll", () => {
 
 /* ---------- saved dictionary ---------- */
 
+/* ---------- part-of-speech filter for the "Слова" panel ---------- */
+
+const WORD_CATEGORIES = ["noun", "verb", "adjective", "pronoun", "adverb", "function", "other"];
+const FUNCTION_GRAMMAR = new Set([
+  "preposition", "postposition", "conjunction", "particle",
+  "interjection", "numeral", "prefix", "suffix"
+]);
+let activeWordCategories = new Set(WORD_CATEGORIES);
+
+function classifyWordCategory(item){
+  const grammar = String((item && item.grammar) || "").trim().toLowerCase();
+  if(!grammar) return "other";
+  if(grammar.startsWith("noun") || grammar.startsWith("abbreviation") || grammar.startsWith("letter")) return "noun";
+  if(grammar === "verb") return "verb";
+  if(grammar === "adjective") return "adjective";
+  if(grammar.includes("pronoun")) return "pronoun";
+  if(grammar === "adverb") return "adverb";
+  if(FUNCTION_GRAMMAR.has(grammar)) return "function";
+  return "other";
+}
+
+document.querySelectorAll("#dictionaryFilters .filter-chip").forEach(button => {
+  button.addEventListener("click", () => {
+    const category = button.dataset.category;
+    if(activeWordCategories.has(category)){
+      activeWordCategories.delete(category);
+      button.classList.remove("active");
+    }else{
+      activeWordCategories.add(category);
+      button.classList.add("active");
+    }
+    renderDictionary();
+  });
+});
+
 function renderDictionary(){
   renderLearningTab();
+
   if(!savedWords.length){
     dictionaryList.innerHTML =
       '<div class="dictionary-empty">' +
@@ -1705,7 +1753,17 @@ function renderDictionary(){
     return;
   }
 
-  dictionaryList.innerHTML = savedWords.map((item, index) => `
+  const rows = savedWords
+    .map((item, index) => ({item, index}))
+    .filter(({item}) => activeWordCategories.has(classifyWordCategory(item)));
+
+  if(!rows.length){
+    dictionaryList.innerHTML =
+      '<div class="dictionary-empty">Нет слов в выбранных категориях.</div>';
+    return;
+  }
+
+  dictionaryList.innerHTML = rows.map(({item, index}) => `
     <div class="dictionary-item" data-index="${index}">
       <div>
         <div class="dictionary-word">${escapeHtml(item.word)}</div>
@@ -2529,19 +2587,6 @@ fileInput.addEventListener("change", async () => {
   }
 
   fileInput.value = "";
-});
-
-document.getElementById("newBtn").addEventListener("click", () => {
-  clearActiveWord();
-  editor.innerHTML = "";
-  currentSelection = null;
-
-  popup.classList.remove("visible");
-
-  renderDictionary();
-  updateWordCount();
-
-  statusEl.textContent = "Новый документ";
 });
 
 document
