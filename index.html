@@ -6,92 +6,119 @@
 <title>German Language Editor</title>
 <style>
 :root{
-  --bg:#242424;--panel:#292929;--line:#474747;--text:#d7d7d7;
-  --muted:#9d9d9d;--heading:#b9c9d8;--accent2:#6f96b4;
-  --popup:#202020;--green:#8db69b;
+  --bg:#16181b;--bg-soft:#1b1e22;--panel:#1c1f23;--panel-2:#20242a;
+  --line:#2b2f35;--line-soft:#24272c;
+  --text:#e6e8eb;--text-dim:#b9bec5;--muted:#82888f;--heading:#eef1f5;
+  --accent:#5b8def;--accent-dim:rgba(91,141,239,.15);--accent-strong:#8ab0f5;
+  --green:#5fb98c;--green-dim:rgba(95,185,140,.15);--red:#e0857f;
+  --radius-sm:6px;--radius:10px;--radius-lg:16px;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.25);--shadow-lg:0 20px 50px rgba(0,0,0,.4);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
-button,input{font:inherit}button{cursor:pointer}
+html,body{height:100%}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+button{cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,transform .1s ease}
+button:active{transform:translateY(1px)}
 .app{min-height:100vh;display:flex;flex-direction:column}
-.topbar{height:64px;padding:0 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:#222}
-.brand{font-size:19px;font-weight:700;color:var(--heading)}
-.toolbar{display:flex;gap:8px;align-items:center}
-.btn{border:1px solid #505050;background:#303030;color:#d5d5d5;border-radius:6px;padding:8px 12px}
-.btn:hover{background:#3a3a3a;border-color:#666}
-.btn.primary{background:#3c566b;border-color:#55748d;color:#eef6fb}
-.toggle{display:flex;align-items:center;gap:7px;margin-left:8px;color:#bbb;font-size:13px;user-select:none}
+.topbar{min-height:64px;padding:10px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--bg-soft)}
+.brand{font-size:18px;font-weight:700;color:var(--heading);letter-spacing:-.01em;display:flex;align-items:center;gap:9px;white-space:nowrap}
+.brand::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel-2);color:var(--text-dim);border-radius:var(--radius-sm);padding:8px 13px;font-size:13px;font-weight:500}
+.btn:hover{background:#262b31;border-color:#3a4149;color:var(--text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#10151c;font-weight:600}
+.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+.tab-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-strong)}
+.autosave-badge{font-size:11px;color:var(--muted);padding:6px 11px;border:1px solid var(--line-soft);border-radius:999px;background:var(--panel);white-space:nowrap}
+.autosave-badge.is-error{color:var(--red);border-color:rgba(224,133,127,.4)}
+.toggle{display:flex;align-items:center;gap:7px;margin-left:4px;color:var(--muted);font-size:13px;user-select:none;white-space:nowrap}
 .workspace{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:0}
 .workspace.single{grid-template-columns:1fr}
 .column{min-width:0;display:flex;flex-direction:column}
 .column+.column{border-left:1px solid var(--line)}
-.column-header{height:48px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);color:var(--heading);font-weight:700;background:#272727}
+.column-header{height:48px;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);color:var(--heading);font-weight:600;font-size:13px;background:var(--panel)}
 .column-header small{color:var(--muted);font-weight:400;font-size:12px}
-.editor-wrap{position:relative;flex:1;overflow:auto}
-.editor{width:100%;min-height:100%;padding:28px 32px 120px;outline:none;white-space:pre-wrap;word-break:break-word;font-size:17px;line-height:1.72;color:#d9d9d9}
-.editor:empty:before{content:attr(data-placeholder);color:#777}
-.dictionary-list{padding:18px 22px 90px;overflow:auto;min-height:100%}
-.dictionary-empty{color:#777;font-size:14px;line-height:1.6;padding:12px 2px}
-.dictionary-item{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:13px 2px;border-bottom:1px solid #2b2b2b}
-.dictionary-word{color:#e6e6e6;font-size:16px;font-weight:600;line-height:1.35}
-.dictionary-form{color:#808080;font-size:12px;margin-top:4px}
-.dictionary-translation{color:#c9c9c9;font-size:15px;line-height:1.4;text-align:right;max-width:52%}
-.dictionary-status{padding:8px 22px;color:#888;font-size:11px;border-bottom:1px solid #2b2b2b}
-.annotation{display:inline;background:rgba(143,179,207,.13);border-bottom:1px solid #6f96b4;border-radius:2px;padding:1px 2px}
-.active-word{background:rgba(73,120,160,.42);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.35)}
-.hover-word{background:rgba(73,120,160,.20);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(111,150,180,.20)}
-.missing-word{border-bottom:2px dotted #d98b8b;cursor:pointer}
-.missing-word:hover{background:rgba(217,139,139,.10)}
-.dictionary-item{position:relative}
-.dictionary-delete{flex:0 0 auto;border:1px solid #4b4b4b;background:#2b2b2b;color:#aaa;border-radius:5px;padding:5px 8px;font-size:11px}
-.dictionary-delete:hover{background:#3a3a3a;color:#ddd}
-.annotation-note{color:#9eb9cc;font-size:.78em;margin-left:3px;opacity:.95}
-.selection-popup{position:fixed;z-index:1000;width:330px;background:var(--popup);border:1px solid #555;border-radius:8px;box-shadow:0 15px 45px rgba(0,0,0,.45);padding:14px;display:none}
+.editor-wrap{position:relative;flex:1;overflow:auto;background:var(--bg)}
+.editor{width:100%;min-height:100%;padding:30px 34px 130px;outline:none;white-space:pre-wrap;word-break:break-word;font-size:17px;line-height:1.75;color:var(--text)}
+.editor:empty:before{content:attr(data-placeholder);color:var(--muted)}
+.dictionary-list{padding:16px 20px 90px;overflow:auto;min-height:100%}
+.dictionary-empty{color:var(--muted);font-size:14px;line-height:1.6;padding:16px 4px}
+.dictionary-item{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 6px;border-bottom:1px solid var(--line-soft);border-radius:var(--radius-sm);position:relative}
+.dictionary-item:hover{background:var(--panel-2)}
+.dictionary-word{color:var(--heading);font-size:15px;font-weight:600;line-height:1.35}
+.dictionary-form{color:var(--muted);font-size:12px;margin-top:4px}
+.dictionary-translation{color:var(--text-dim);font-size:14px;line-height:1.4;text-align:right;max-width:52%}
+.dictionary-status{padding:9px 20px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line-soft)}
+.dictionary-delete{flex:0 0 auto;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);border-radius:var(--radius-sm);padding:5px 9px;font-size:11px}
+.dictionary-delete:hover{background:#33262a;color:var(--red);border-color:rgba(224,133,127,.4)}
+.annotation{display:inline;background:var(--accent-dim);border-bottom:1px solid var(--accent);border-radius:2px;padding:1px 2px}
+.active-word{background:rgba(91,141,239,.35);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.4)}
+.hover-word{background:rgba(91,141,239,.18);border-radius:3px;padding:1px 2px;box-shadow:0 0 0 1px rgba(91,141,239,.2)}
+.missing-word{border-bottom:2px dotted var(--red);cursor:pointer}
+.missing-word:hover{background:rgba(224,133,127,.1)}
+.annotation-note{color:var(--accent-strong);font-size:.78em;margin-left:3px;opacity:.9}
+.selection-popup{position:fixed;z-index:1000;width:330px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:16px;display:none}
 .selection-popup.visible{display:block}
-.popup-word{font-size:19px;font-weight:700;color:#e1e8ed;margin-bottom:3px}
-.popup-form{color:#91adc1;font-size:14px;margin-bottom:10px}
-.popup-row{display:grid;grid-template-columns:92px 1fr;gap:8px;margin:5px 0;font-size:14px}
-.popup-label{color:#858585}.popup-value{color:#ddd}
-.popup-actions{display:flex;gap:7px;margin-top:13px}
-.popup-actions .btn{flex:1;font-size:12px;padding:7px 8px}
-.popup-input{width:100%;margin-top:10px;background:#2c2c2c;color:#ddd;border:1px solid #4c4c4c;border-radius:5px;padding:8px 9px;outline:none}
-.popup-input:focus{border-color:var(--accent2)}
-.statusbar{height:34px;border-top:1px solid var(--line);padding:0 16px;display:flex;align-items:center;justify-content:space-between;color:#858585;font-size:12px;background:#222}
+.popup-word{font-size:19px;font-weight:700;color:var(--heading);margin-bottom:3px}
+.popup-form{color:var(--accent-strong);font-size:13px;margin-bottom:12px}
+.popup-row{display:grid;grid-template-columns:96px 1fr;gap:8px;margin:6px 0;font-size:13px}
+.popup-label{color:var(--muted)}.popup-value{color:var(--text-dim)}
+.popup-actions{display:flex;gap:8px;margin-top:14px}
+.popup-actions .btn{flex:1;font-size:12px;padding:8px 8px}
+.popup-input{width:100%;margin-top:10px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 10px;outline:none;font-size:13px}
+.popup-input:focus{border-color:var(--accent)}
+.statusbar{height:36px;border-top:1px solid var(--line);padding:0 18px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px;background:var(--bg-soft)}
 .statusbar .saved{color:var(--green)}
 #fileInput,#memoryInput{display:none}
-.tab-btn.active{background:#3c566b;border-color:#55748d;color:#eef6fb}
 .view{display:none;flex:1;min-height:0}
 .view.active{display:flex}
-.learning-view{flex-direction:column;overflow:auto;padding:28px 34px 70px}
-.learning-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:24px}
-.learning-title{font-size:24px;font-weight:700;color:#dfe8ef}
-.learning-subtitle{font-size:13px;color:#888;margin-top:5px}
-.learning-stats{font-size:13px;color:#9d9d9d;text-align:right}
+.learning-view{flex-direction:column;overflow:auto;padding:30px 36px 70px}
+.learning-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:20px}
+.learning-title{font-size:23px;font-weight:700;color:var(--heading);letter-spacing:-.01em}
+.learning-subtitle{font-size:13px;color:var(--muted);margin-top:5px}
+.learning-stats{font-size:13px;color:var(--text-dim);text-align:right}
+.study-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.segmented{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.segmented-btn{border:none;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;font-size:12px;font-weight:500}
+.segmented-btn.active{background:var(--accent);color:#10151c}
 .learning-main{display:grid;grid-template-columns:minmax(0,620px) minmax(260px,1fr);gap:28px;align-items:start}
-.study-card{background:#202020;border:1px solid #4b4b4b;border-radius:10px;padding:28px;min-height:310px;box-shadow:0 15px 40px rgba(0,0,0,.22)}
-.study-label{font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
-.study-word{font-size:36px;font-weight:700;color:#e5edf2;min-height:54px}
-.study-form{font-size:14px;color:#8fa9bb;margin-top:8px;min-height:20px}
-.study-translation{font-size:24px;color:#d6d6d6;min-height:38px;margin-top:30px}
-.study-translation.hidden{visibility:hidden}
-.study-actions{display:flex;gap:8px;margin-top:30px}
+.progress-bar{height:5px;border-radius:999px;background:var(--line-soft);overflow:hidden;margin-bottom:8px}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .25s ease}
+.progress-label{font-size:11px;color:var(--muted);margin-bottom:14px}
+.flip-card{perspective:1400px;min-height:300px;cursor:pointer}
+.flip-card-inner{position:relative;width:100%;min-height:300px;transition:transform .5s cubic-bezier(.4,.2,.2,1);transform-style:preserve-3d}
+.flip-card-inner.flipped{transform:rotateY(180deg)}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column}
+.flip-back{transform:rotateY(180deg);justify-content:center;align-items:center;text-align:center}
+.study-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:16px}
+.study-word{font-size:34px;font-weight:700;color:var(--heading);min-height:48px;letter-spacing:-.01em}
+.study-form{font-size:13px;color:var(--accent-strong);margin-top:10px;min-height:18px}
+.flip-hint{margin-top:auto;font-size:12px;color:var(--muted)}
+.study-translation{font-size:26px;color:var(--heading);text-align:center;font-weight:600}
+.study-actions{display:flex;gap:8px;margin-top:18px}
 .study-actions .btn{flex:1}
 .study-secondary{display:flex;gap:8px;margin-top:10px}
 .study-secondary .btn{flex:1;font-size:12px}
-.learning-list{background:#292929;border:1px solid #414141;border-radius:10px;overflow:hidden}
-.learning-list-head{padding:14px 16px;border-bottom:1px solid #414141;color:#aaa;font-size:13px}
-.learning-word-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #353535;cursor:pointer}
+.study-keys-hint{margin-top:14px;font-size:11px;color:var(--muted);text-align:center}
+.learning-list{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden}
+.learning-list-head{padding:14px 16px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.learning-word-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer}
 .learning-word-item:last-child{border-bottom:0}
-.learning-word-item:hover{background:#303030}
-.learning-word-name{color:#e2e2e2;font-weight:600}
-.learning-word-translation{color:#999;font-size:12px;margin-top:3px}
-.learning-word-progress{font-size:11px;color:#777;white-space:nowrap}
-.learning-empty{color:#777;padding:22px 16px;font-size:13px;line-height:1.6}
+.learning-word-item:hover{background:var(--panel-2)}
+.learning-word-item.is-current{background:var(--accent-dim)}
+.learning-word-name{color:var(--heading);font-weight:600;font-size:13px}
+.learning-word-translation{color:var(--muted);font-size:12px;margin-top:3px}
+.learning-word-progress{font-size:11px;color:var(--muted);white-space:nowrap}
+.learning-word-progress.is-known{color:var(--green)}
+.learning-empty{color:var(--muted);padding:26px 16px;font-size:13px;line-height:1.6}
 @media(max-width:800px){
   .workspace{grid-template-columns:1fr}.translation-column{display:none}
   .learning-main{grid-template-columns:1fr}
   .learning-view{padding:22px 18px 60px}
-  .topbar{padding:0 12px}.editor{padding:22px 18px 100px}
+  .topbar{padding:10px 12px}.editor{padding:22px 18px 100px}
+  .study-toolbar{flex-wrap:wrap}
 }
 </style>
 </head>
@@ -105,7 +132,8 @@ button,input{font:inherit}button{cursor:pointer}
     <button class="btn primary" id="saveBtn">Сохранить</button>
     <button class="btn tab-btn active" id="editorTabBtn">Редактор</button>
     <button class="btn tab-btn" id="learningTabBtn">Обучение</button>
-    <button class="btn" id="memoryBtn">Подключить память</button>
+    <span class="autosave-badge" id="autosaveBadge">● Память ещё не сохранялась</span>
+    <button class="btn" id="memoryBtn" title="Необязательно: локальная память сохраняется в браузере автоматически. Файл — это просто резервная копия.">Резервная копия в файл</button>
     <label class="toggle">
       <input type="checkbox" id="dictionaryToggle" checked>
       Слова для обучения
@@ -137,28 +165,49 @@ button,input{font:inherit}button{cursor:pointer}
 <section class="view learning-view" id="learningView">
   <div class="learning-head">
     <div>
-      <div class="learning-title">Обучение слов</div>
-      <div class="learning-subtitle">Слова берутся из твоей памяти обучения</div>
+      <div class="learning-title">Карточки для запоминания</div>
+      <div class="learning-subtitle">Слова из твоей личной памяти — сохраняются автоматически в этом браузере</div>
     </div>
     <div class="learning-stats" id="learningStats">0 слов</div>
   </div>
 
+  <div class="study-toolbar">
+    <div class="segmented" id="studyFilter">
+      <button class="segmented-btn active" type="button" data-filter="all">Все слова</button>
+      <button class="segmented-btn" type="button" data-filter="review">Только повторить</button>
+    </div>
+    <button class="btn" id="shuffleStudyBtn" type="button">Перемешать</button>
+  </div>
+
   <div class="learning-main">
     <div>
-      <div class="study-card">
-        <div class="study-label">Немецкое слово</div>
-        <div class="study-word" id="studyWord">Нет слов для обучения</div>
-        <div class="study-form" id="studyForm"></div>
-        <div class="study-translation hidden" id="studyTranslation">—</div>
-        <div class="study-actions">
-          <button class="btn primary" id="showTranslationBtn">Показать перевод</button>
-          <button class="btn" id="nextStudyBtn">Следующее</button>
-        </div>
-        <div class="study-secondary">
-          <button class="btn" id="repeatStudyBtn">Повторить</button>
-          <button class="btn" id="knowStudyBtn">Знаю</button>
+      <div class="progress-bar"><div class="progress-fill" id="studyProgressFill"></div></div>
+      <div class="progress-label" id="studyProgressLabel">0 / 0</div>
+
+      <div class="flip-card" id="flipCard">
+        <div class="flip-card-inner" id="flipCardInner">
+          <div class="flip-face flip-front">
+            <div class="study-label">Немецкое слово</div>
+            <div class="study-word" id="studyWord">Нет слов для обучения</div>
+            <div class="study-form" id="studyForm"></div>
+            <div class="flip-hint">Нажми на карточку или пробел, чтобы увидеть перевод</div>
+          </div>
+          <div class="flip-face flip-back">
+            <div class="study-label">Перевод</div>
+            <div class="study-translation" id="studyTranslation">—</div>
+          </div>
         </div>
       </div>
+
+      <div class="study-actions">
+        <button class="btn" id="repeatStudyBtn" type="button">Повторить ещё раз</button>
+        <button class="btn primary" id="knowStudyBtn" type="button">Знаю ✓</button>
+      </div>
+      <div class="study-secondary">
+        <button class="btn" id="prevStudyBtn" type="button">← Назад</button>
+        <button class="btn" id="nextStudyBtn" type="button">Вперёд →</button>
+      </div>
+      <div class="study-keys-hint">Пробел — перевернуть · ← / → — навигация · K — знаю · R — повторить</div>
     </div>
 
     <div class="learning-list">
@@ -257,24 +306,49 @@ let pinnedPopup = false;
 /* ---------- learning memory ---------- */
 
 function loadLearningMemory(){
+  const badge = document.getElementById("autosaveBadge");
   try{
     const raw = localStorage.getItem(LEARNING_MEMORY_KEY);
     const data = raw ? JSON.parse(raw) : [];
     savedWords = Array.isArray(data) ? data.filter(Boolean) : [];
+    if(badge){
+      badge.textContent = savedWords.length
+        ? "● Память загружена (" + savedWords.length + ")"
+        : "● Память пуста";
+    }
   }catch(error){
     console.error(error);
     savedWords = [];
+    if(badge){
+      badge.textContent = "● Не удалось прочитать память браузера";
+      badge.classList.add("is-error");
+    }
   }
   renderDictionary();
+}
+
+function updateAutosaveBadge(success){
+  const badge = document.getElementById("autosaveBadge");
+  if(!badge) return;
+  if(success){
+    const time = new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+    badge.textContent = "● Сохранено локально · " + time;
+    badge.classList.remove("is-error");
+  }else{
+    badge.textContent = "● Ошибка локального сохранения";
+    badge.classList.add("is-error");
+  }
 }
 
 function saveLearningMemoryLocal(){
   try{
     localStorage.setItem(LEARNING_MEMORY_KEY, JSON.stringify(savedWords));
+    updateAutosaveBadge(true);
     return true;
   }catch(error){
     console.error(error);
     statusEl.textContent = "Не удалось сохранить память слов в браузере";
+    updateAutosaveBadge(false);
     return false;
   }
 }
@@ -366,7 +440,7 @@ async function loadMemoryHandle(){
     if(handle){
       learningMemoryHandle = handle;
       memoryFileName = handle.name || memoryFileName;
-      document.getElementById("memoryBtn").textContent = "Память: " + memoryFileName;
+      document.getElementById("memoryBtn").textContent = "Файл: " + memoryFileName;
     }
   }catch(error){
     console.error(error);
@@ -394,8 +468,8 @@ async function connectMemoryFile(){
     memoryFileName = handle.name || "learning-words.json";
     await saveMemoryHandle(handle);
     await saveLearningMemoryFile();
-    document.getElementById("memoryBtn").textContent = "Память: " + memoryFileName;
-    statusEl.textContent = "Файл памяти подключён: " + memoryFileName;
+    document.getElementById("memoryBtn").textContent = "Файл: " + memoryFileName;
+    statusEl.textContent = "Резервный файл подключён: " + memoryFileName;
   }catch(error){
     if(error && error.name === "AbortError") return;
     console.error(error);
@@ -1132,9 +1206,16 @@ function renderDictionary(){
   });
 }
 
-/* ---------- learning tab ---------- */
-let studyIndex = 0;
-let studyTranslationVisible = false;
+/* ---------- learning tab (flashcards) ---------- */
+let studyQueue = [];
+let studyPos = 0;
+let studyFilter = "all";
+let cardFlipped = false;
+
+const flipCardEl = document.getElementById("flipCard");
+const flipCardInnerEl = document.getElementById("flipCardInner");
+const studyProgressFillEl = document.getElementById("studyProgressFill");
+const studyProgressLabelEl = document.getElementById("studyProgressLabel");
 
 function ensureLearningStats(item){
   if(!item) return;
@@ -1142,45 +1223,84 @@ function ensureLearningStats(item){
   if(typeof item.known !== "boolean") item.known = false;
 }
 
+function buildStudyQueue(){
+  const indices = savedWords.map((_, i) => i);
+  studyQueue = studyFilter === "review" ? indices.filter(i => !savedWords[i].known) : indices;
+  if(studyPos >= studyQueue.length) studyPos = 0;
+  if(studyPos < 0) studyPos = 0;
+}
+
+function setCardFlipped(value){
+  cardFlipped = value;
+  flipCardInnerEl.classList.toggle("flipped", cardFlipped);
+}
+
+function toggleCardFlip(){
+  if(!studyQueue.length) return;
+  setCardFlipped(!cardFlipped);
+}
+
 function renderLearningTab(){
   savedWords.forEach(ensureLearningStats);
+  buildStudyQueue();
+
   const total = savedWords.length;
   const known = savedWords.filter(x => x.known).length;
-  learningStatsEl.textContent = total + " слов · знаю: " + known + " · повторить: " + (total-known);
+  learningStatsEl.textContent = total + " слов · знаю: " + known + " · повторить: " + (total - known);
 
   if(!total){
     learningListEl.innerHTML = '<div class="learning-empty">Пока нет слов для обучения. Сохраняй незнакомые слова в редакторе — они появятся здесь.</div>';
     studyWordEl.textContent = "Нет слов для обучения";
     studyFormEl.textContent = "";
     studyTranslationEl.textContent = "—";
-    studyTranslationEl.classList.add("hidden");
+    setCardFlipped(false);
+    studyProgressFillEl.style.width = "0%";
+    studyProgressLabelEl.textContent = "0 / 0";
     return;
   }
 
-  if(studyIndex >= total) studyIndex = 0;
-  const item = savedWords[studyIndex];
-  studyWordEl.textContent = item.word || "—";
-  studyFormEl.textContent = [item.article, item.base && item.base !== item.word ? item.base : "", item.grammar].filter(Boolean).join(" · ");
-  studyTranslationEl.textContent = item.translation || "—";
-  studyTranslationEl.classList.toggle("hidden", !studyTranslationVisible);
+  if(!studyQueue.length){
+    studyWordEl.textContent = "Все слова выучены 🎉";
+    studyFormEl.textContent = "Переключись на «Все слова», чтобы повторить их снова.";
+    studyTranslationEl.textContent = "—";
+    setCardFlipped(false);
+    studyProgressFillEl.style.width = "100%";
+    studyProgressLabelEl.textContent = "0 / 0";
+  }else{
+    const realIndex = studyQueue[studyPos];
+    const item = savedWords[realIndex];
+    studyWordEl.textContent = item.word || "—";
+    studyFormEl.textContent = [item.article, item.base && item.base !== item.word ? item.base : "", item.grammar].filter(Boolean).join(" · ");
+    studyTranslationEl.textContent = item.translation || "—";
+    studyProgressFillEl.style.width = Math.round(((studyPos + 1) / studyQueue.length) * 100) + "%";
+    studyProgressLabelEl.textContent = (studyPos + 1) + " / " + studyQueue.length;
+  }
 
-  learningListEl.innerHTML = savedWords.map((item,index) => `
-    <div class="learning-word-item" data-study-index="${index}">
+  learningListEl.innerHTML = savedWords.map((item, index) => `
+    <div class="learning-word-item${studyQueue[studyPos] === index ? " is-current" : ""}" data-study-index="${index}">
       <div>
         <div class="learning-word-name">${escapeHtml(item.word || "")}</div>
         <div class="learning-word-translation">${escapeHtml(item.translation || "")}</div>
       </div>
-      <div class="learning-word-progress">${item.known ? "Знаю" : "Повторить"} · ${Number(item.reviewed || 0)}</div>
+      <div class="learning-word-progress${item.known ? " is-known" : ""}">${item.known ? "Знаю" : "Повторить"} · ${Number(item.reviewed || 0)}</div>
     </div>
   `).join("");
 
   learningListEl.querySelectorAll("[data-study-index]").forEach(el => {
-    el.addEventListener("click", () => {
-      studyIndex = Number(el.dataset.studyIndex);
-      studyTranslationVisible = false;
-      renderLearningTab();
-    });
+    el.addEventListener("click", () => jumpToWord(Number(el.dataset.studyIndex)));
   });
+}
+
+function jumpToWord(index){
+  studyFilter = "all";
+  document.querySelectorAll("#studyFilter .segmented-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.filter === "all");
+  });
+  buildStudyQueue();
+  const pos = studyQueue.indexOf(index);
+  studyPos = pos >= 0 ? pos : 0;
+  setCardFlipped(false);
+  renderLearningTab();
 }
 
 function openLearningTab(){
@@ -1189,6 +1309,7 @@ function openLearningTab(){
   learningView.classList.add("active");
   editorTabBtn.classList.remove("active");
   learningTabBtn.classList.add("active");
+  setCardFlipped(false);
   renderLearningTab();
 }
 
@@ -1202,42 +1323,85 @@ function openEditorTab(){
 editorTabBtn.addEventListener("click", openEditorTab);
 learningTabBtn.addEventListener("click", openLearningTab);
 
-document.getElementById("showTranslationBtn").addEventListener("click", () => {
-  if(!savedWords.length) return;
-  studyTranslationVisible = !studyTranslationVisible;
-  studyTranslationEl.classList.toggle("hidden", !studyTranslationVisible);
-  document.getElementById("showTranslationBtn").textContent = studyTranslationVisible ? "Скрыть перевод" : "Показать перевод";
+flipCardEl.addEventListener("click", toggleCardFlip);
+
+document.querySelectorAll("#studyFilter .segmented-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    studyFilter = btn.dataset.filter;
+    document.querySelectorAll("#studyFilter .segmented-btn").forEach(b => b.classList.toggle("active", b === btn));
+    studyPos = 0;
+    setCardFlipped(false);
+    renderLearningTab();
+  });
 });
 
-document.getElementById("nextStudyBtn").addEventListener("click", () => {
-  if(!savedWords.length) return;
-  studyIndex = (studyIndex + 1) % savedWords.length;
-  studyTranslationVisible = false;
-  document.getElementById("showTranslationBtn").textContent = "Показать перевод";
-  renderLearningTab();
-});
-
-document.getElementById("repeatStudyBtn").addEventListener("click", async () => {
-  if(!savedWords.length) return;
-  const item = savedWords[studyIndex];
-  ensureLearningStats(item);
-  item.reviewed += 1;
-  item.known = false;
+document.getElementById("shuffleStudyBtn").addEventListener("click", () => {
+  if(savedWords.length < 2) return;
+  for(let i = savedWords.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [savedWords[i], savedWords[j]] = [savedWords[j], savedWords[i]];
+  }
+  studyPos = 0;
+  setCardFlipped(false);
   saveLearningMemory();
   renderLearningTab();
+  statusEl.textContent = "Карточки перемешаны";
 });
 
-document.getElementById("knowStudyBtn").addEventListener("click", async () => {
-  if(!savedWords.length) return;
-  const item = savedWords[studyIndex];
+function goToNextCard(){
+  if(!studyQueue.length) return;
+  studyPos = (studyPos + 1) % studyQueue.length;
+  setCardFlipped(false);
+  renderLearningTab();
+}
+
+function goToPrevCard(){
+  if(!studyQueue.length) return;
+  studyPos = (studyPos - 1 + studyQueue.length) % studyQueue.length;
+  setCardFlipped(false);
+  renderLearningTab();
+}
+
+function markCurrentCard(known){
+  if(!studyQueue.length) return;
+  const realIndex = studyQueue[studyPos];
+  const item = savedWords[realIndex];
   ensureLearningStats(item);
   item.reviewed += 1;
-  item.known = true;
+  item.known = known;
   saveLearningMemory();
-  studyIndex = (studyIndex + 1) % savedWords.length;
-  studyTranslationVisible = false;
-  document.getElementById("showTranslationBtn").textContent = "Показать перевод";
-  renderLearningTab();
+
+  if(known && studyFilter === "review"){
+    // The item drops out of the review queue; the next one slides into place.
+    setCardFlipped(false);
+    renderLearningTab();
+  }else{
+    goToNextCard();
+  }
+}
+
+document.getElementById("nextStudyBtn").addEventListener("click", goToNextCard);
+document.getElementById("prevStudyBtn").addEventListener("click", goToPrevCard);
+document.getElementById("repeatStudyBtn").addEventListener("click", () => markCurrentCard(false));
+document.getElementById("knowStudyBtn").addEventListener("click", () => markCurrentCard(true));
+
+document.addEventListener("keydown", event => {
+  if(!learningView.classList.contains("active")) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if(tag === "INPUT" || tag === "TEXTAREA") return;
+
+  if(event.code === "Space"){
+    event.preventDefault();
+    toggleCardFlip();
+  }else if(event.key === "ArrowRight"){
+    goToNextCard();
+  }else if(event.key === "ArrowLeft"){
+    goToPrevCard();
+  }else if(event.key.toLowerCase() === "k"){
+    markCurrentCard(true);
+  }else if(event.key.toLowerCase() === "r"){
+    markCurrentCard(false);
+  }
 });
 
 function saveWordToDictionary(){
@@ -1561,11 +1725,61 @@ function updateWordCount(){
     " · не найдено: " + notFound;
 }
 
+function getCaretOffset(root){
+  const selection = window.getSelection();
+  if(!selection.rangeCount) return null;
+  const range = selection.getRangeAt(0);
+  if(!root.contains(range.startContainer)) return null;
+
+  const preRange = document.createRange();
+  preRange.selectNodeContents(root);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  return preRange.toString().length;
+}
+
+function setCaretOffset(root, offset){
+  if(offset == null) return;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node;
+  let remaining = offset;
+  let lastNode = null;
+
+  while((node = walker.nextNode())){
+    lastNode = node;
+    const length = node.nodeValue.length;
+    if(remaining <= length){
+      const range = document.createRange();
+      range.setStart(node, remaining);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+    remaining -= length;
+  }
+
+  if(lastNode){
+    const range = document.createRange();
+    range.setStart(lastNode, lastNode.nodeValue.length);
+    range.collapse(true);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+}
+
 editor.addEventListener("input", () => {
   setTimeout(() => {
+    // refreshMissingWordMarks() rebuilds text nodes to (un)wrap missing
+    // words, which drops the browser's caret. Restore it by character
+    // offset so typing doesn't scramble the cursor position.
+    const caretOffset = getCaretOffset(editor);
     updateWordCount();
     refreshMissingWordMarks();
     updateWordCount();
+    setCaretOffset(editor, caretOffset);
   }, 0);
 });
 
