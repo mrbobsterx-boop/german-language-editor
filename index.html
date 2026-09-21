@@ -83,7 +83,13 @@ button:active{transform:translateY(1px)}
 .vocab-search{width:100%;margin-bottom:14px;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-sm);padding:11px 14px;font-size:16px;font-family:inherit}
 .vocab-search:focus{outline:none;border-color:var(--accent)}
 .vocab-filters{padding:0 0 16px;border-bottom:none}
-.vocab-list-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
+.vocab-view{display:flex;flex-direction:column;overflow:hidden}
+.vocab-view .learning-head,
+.vocab-view .vocab-mode-switch,
+.vocab-view .vocab-search,
+.vocab-view .level-chips,
+.vocab-view .vocab-filters{flex:none}
+.vocab-list-wrap{flex:1;min-height:0;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .vocab-add-btn.is-added{color:var(--green);border-color:rgba(95,185,140,.35);cursor:default}
 .vocab-add-btn.is-added:hover{background:var(--panel-2)}
 .vocab-mode-switch{margin-bottom:14px}
@@ -375,7 +381,7 @@ button:active{transform:translateY(1px)}
   </div>
 </section>
 
-<section class="view learning-view" id="vocabView">
+<section class="view learning-view vocab-view" id="vocabView">
   <div class="learning-head">
     <div>
       <div class="learning-title">Словарь</div>
