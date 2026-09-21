@@ -270,7 +270,10 @@ button:active{transform:translateY(1px)}
 
   <div class="popup-actions">
     <button class="btn" id="annotateBtn">Добавить в текст</button>
-    <button class="btn primary" id="dictionaryBtn">Сохранить в словарь</button>
+    <button class="btn primary" id="dictionaryBtn">В мои карточки</button>
+  </div>
+  <div class="popup-actions">
+    <button class="btn" id="commonDictionaryBtn" style="flex:1" title="Добавляет перевод в общий словарь приложения, без добавления слова в карточки для обучения">+ В общий словарь</button>
   </div>
 </div>
 
@@ -655,29 +658,58 @@ function updateGithubSyncBadge(state, detail){
   }
 }
 
-async function fetchRemoteMemorySnapshot(){
+function githubContentsUrl(path, withRef){
+  return (
+    "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO +
+    "/contents/" + path + (withRef ? ("?ref=" + GITHUB_BRANCH) : "")
+  );
+}
+
+async function fetchGithubJsonFile(path){
   const token = getGithubToken();
   const headers = {"Accept": "application/vnd.github+json"};
   if(token) headers.Authorization = "token " + token;
 
-  const url =
-    "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO +
-    "/contents/" + GITHUB_MEMORY_PATH + "?ref=" + GITHUB_BRANCH + "&_=" + Date.now();
-
+  const url = githubContentsUrl(path, true) + "&_=" + Date.now();
   const response = await fetch(url, {headers, cache: "no-store"});
 
   if(response.status === 404){
-    githubRemoteSha = null;
-    return [];
+    return {sha: null, data: null};
   }
   if(!response.ok){
     throw new Error("HTTP " + response.status);
   }
 
-  const data = await response.json();
-  githubRemoteSha = data.sha;
-  const parsed = JSON.parse(base64ToUtf8(data.content));
-  return Array.isArray(parsed.words) ? parsed.words.filter(Boolean) : [];
+  const body = await response.json();
+  return {sha: body.sha, data: JSON.parse(base64ToUtf8(body.content))};
+}
+
+async function putGithubJsonFile(path, payload, sha, message){
+  const token = getGithubToken();
+  if(!token) throw new Error("no-token");
+
+  const body = {
+    message,
+    content: utf8ToBase64(JSON.stringify(payload, null, 2)),
+    branch: GITHUB_BRANCH
+  };
+  if(sha) body.sha = sha;
+
+  return fetch(githubContentsUrl(path, false), {
+    method: "PUT",
+    headers: {
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      Authorization: "token " + token
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+async function fetchRemoteMemorySnapshot(){
+  const {sha, data} = await fetchGithubJsonFile(GITHUB_MEMORY_PATH);
+  githubRemoteSha = sha;
+  return data && Array.isArray(data.words) ? data.words.filter(Boolean) : [];
 }
 
 function mergeRemoteWords(remoteWords){
@@ -732,33 +764,13 @@ async function syncMemoryFromGithub(){
   }
 }
 
-async function putMemoryToGithub(token){
+function putMemoryToGithub(){
   const payload = {
     version: 1,
     updatedAt: new Date().toISOString(),
     words: savedWords
   };
-
-  const body = {
-    message: "Update learning memory (" + savedWords.length + " words)",
-    content: utf8ToBase64(JSON.stringify(payload, null, 2)),
-    branch: GITHUB_BRANCH
-  };
-  if(githubRemoteSha) body.sha = githubRemoteSha;
-
-  const url =
-    "https://api.github.com/repos/" + GITHUB_OWNER + "/" + GITHUB_REPO +
-    "/contents/" + GITHUB_MEMORY_PATH;
-
-  return fetch(url, {
-    method: "PUT",
-    headers: {
-      "Accept": "application/vnd.github+json",
-      "Content-Type": "application/json",
-      Authorization: "token " + token
-    },
-    body: JSON.stringify(body)
-  });
+  return putGithubJsonFile(GITHUB_MEMORY_PATH, payload, githubRemoteSha, "Update learning memory (" + savedWords.length + " words)");
 }
 
 async function pushMemoryToGithub(){
@@ -777,13 +789,13 @@ async function pushMemoryToGithub(){
   updateGithubSyncBadge("syncing");
 
   try{
-    let response = await putMemoryToGithub(token);
+    let response = await putMemoryToGithub();
 
     if(response.status === 409){
       // Someone else (another browser) saved in the meantime; refresh
       // the sha we know about and retry once with our current words.
       await fetchRemoteMemorySnapshot();
-      response = await putMemoryToGithub(token);
+      response = await putMemoryToGithub();
     }
 
     if(!response.ok){
@@ -804,6 +816,143 @@ async function pushMemoryToGithub(){
       pushMemoryToGithub();
     }
   }
+}
+
+/* ---------- GitHub sync: shared custom dictionary ----------
+   Words you translate manually get added here (data/de-ru-custom.json),
+   separate from your personal flashcard memory, so a translation you add
+   fixes "not found" everywhere/for anyone reading this repo's data,
+   without forcing that word into your study queue.
+*/
+const GITHUB_CUSTOM_DICT_PATH = "data/de-ru-custom.json";
+const CUSTOM_DICTIONARY_KEY = "german-language-custom-dictionary-v1";
+let customDictionary = new Map();
+let githubCustomDictSha = null;
+let githubCustomDictSyncInFlight = false;
+let githubCustomDictSyncQueued = false;
+
+function customDictionaryToArray(){
+  return Array.from(customDictionary.values());
+}
+
+function loadCustomDictionaryLocal(){
+  try{
+    const raw = localStorage.getItem(CUSTOM_DICTIONARY_KEY);
+    const data = raw ? JSON.parse(raw) : [];
+    const list = Array.isArray(data) ? data : (Array.isArray(data.entries) ? data.entries : []);
+    for(const item of list){
+      if(!item || !item.word || !item.translation) continue;
+      customDictionary.set(normalizeWord(item.word), {
+        word: item.word,
+        translation: item.translation,
+        grammar: item.grammar || ""
+      });
+    }
+  }catch(error){
+    console.error(error);
+  }
+}
+
+function saveCustomDictionaryLocal(){
+  try{
+    localStorage.setItem(CUSTOM_DICTIONARY_KEY, JSON.stringify(customDictionaryToArray()));
+    return true;
+  }catch(error){
+    console.error(error);
+    return false;
+  }
+}
+
+function mergeRemoteCustomDictionary(remoteEntries){
+  if(!Array.isArray(remoteEntries) || !remoteEntries.length) return false;
+
+  let changed = false;
+  for(const item of remoteEntries){
+    if(!item || !item.word || !item.translation) continue;
+    const key = normalizeWord(item.word);
+    if(!customDictionary.has(key)){
+      customDictionary.set(key, {word: item.word, translation: item.translation, grammar: item.grammar || ""});
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+async function syncCustomDictionaryFromGithub(){
+  try{
+    const {sha, data} = await fetchGithubJsonFile(GITHUB_CUSTOM_DICT_PATH);
+    githubCustomDictSha = sha;
+    const remoteEntries = data && Array.isArray(data.entries) ? data.entries.filter(Boolean) : [];
+    const changed = mergeRemoteCustomDictionary(remoteEntries);
+
+    if(changed){
+      saveCustomDictionaryLocal();
+      refreshMissingWordMarks();
+      updateWordCount();
+      updateDictionaryStatusText();
+    }
+  }catch(error){
+    console.error(error);
+  }
+}
+
+function putCustomDictionaryToGithub(){
+  const entries = customDictionaryToArray();
+  const payload = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries
+  };
+  return putGithubJsonFile(GITHUB_CUSTOM_DICT_PATH, payload, githubCustomDictSha, "Update custom dictionary (" + entries.length + " entries)");
+}
+
+async function pushCustomDictionaryToGithub(){
+  const token = getGithubToken();
+  if(!token){
+    updateGithubSyncBadge("read-only");
+    return;
+  }
+
+  if(githubCustomDictSyncInFlight){
+    githubCustomDictSyncQueued = true;
+    return;
+  }
+
+  githubCustomDictSyncInFlight = true;
+  updateGithubSyncBadge("syncing");
+
+  try{
+    let response = await putCustomDictionaryToGithub();
+
+    if(response.status === 409){
+      const fresh = await fetchGithubJsonFile(GITHUB_CUSTOM_DICT_PATH);
+      githubCustomDictSha = fresh.sha;
+      response = await putCustomDictionaryToGithub();
+    }
+
+    if(!response.ok){
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody.message || ("HTTP " + response.status));
+    }
+
+    const result = await response.json();
+    githubCustomDictSha = result.content.sha;
+    updateGithubSyncBadge("synced");
+  }catch(error){
+    console.error(error);
+    updateGithubSyncBadge("error", error.message);
+  }finally{
+    githubCustomDictSyncInFlight = false;
+    if(githubCustomDictSyncQueued){
+      githubCustomDictSyncQueued = false;
+      pushCustomDictionaryToGithub();
+    }
+  }
+}
+
+async function saveCustomDictionary(){
+  saveCustomDictionaryLocal();
+  pushCustomDictionaryToGithub();
 }
 
 /* ---------- GitHub sync modal ---------- */
@@ -840,6 +989,7 @@ document.getElementById("githubTokenSaveBtn").addEventListener("click", () => {
   closeGithubModal();
   statusEl.textContent = "Токен сохранён в этом браузере";
   pushMemoryToGithub();
+  pushCustomDictionaryToGithub();
 });
 
 document.getElementById("githubTokenClearBtn").addEventListener("click", () => {
@@ -901,6 +1051,13 @@ function addDictionaryEntry(entry){
   }
 }
 
+function updateDictionaryStatusText(){
+  const customCount = customDictionary.size;
+  dictionaryStatus.textContent =
+    "FreeDict DE→RU: " + localDictionary.size.toLocaleString("ru-RU") + " записей" +
+    (customCount ? " · добавлено вручную: " + customCount.toLocaleString("ru-RU") : "");
+}
+
 async function loadLocalDictionary(){
   try{
     const response = await fetch("data/de-ru-freedict.json", {
@@ -949,11 +1106,7 @@ async function loadLocalDictionary(){
       }
     }
 
-    dictionaryStatus.textContent =
-      "FreeDict DE→RU: " +
-      localDictionary.size.toLocaleString("ru-RU") +
-      " записей";
-
+    updateDictionaryStatusText();
     statusEl.textContent = "Словарь загружен";
   }catch(error){
     console.error(error);
@@ -1118,7 +1271,7 @@ function morphologyCandidates(word){
 
 function lookupDirect(word){
   const key = normalizeWord(word);
-  return learningDictionary.get(key) || localDictionary.get(key);
+  return learningDictionary.get(key) || customDictionary.get(key) || localDictionary.get(key);
 }
 
 function buildWordInfo(selectedText, entry){
@@ -1768,6 +1921,43 @@ document
   .getElementById("dictionaryBtn")
   .addEventListener("click", saveWordToDictionary);
 
+function saveWordToCommonDictionary(){
+  if(!currentSelection) return;
+
+  const selectedText = currentSelection.text;
+  const info = lookupWord(selectedText);
+  const manual = document.getElementById("annotationInput").value.trim();
+
+  const translation = manual || (
+    info.translation !== "Не найдено в словаре" ? info.translation : ""
+  );
+
+  if(!translation){
+    statusEl.textContent = "Введите перевод для добавления в общий словарь";
+    return;
+  }
+
+  const key = normalizeWord(selectedText);
+  if(!key) return;
+
+  customDictionary.set(key, {
+    word: info.base !== "—" ? info.base : selectedText,
+    translation,
+    grammar: info.grammar || ""
+  });
+
+  saveCustomDictionary();
+  refreshMissingWordMarks();
+  updateWordCount();
+  updateDictionaryStatusText();
+
+  statusEl.textContent = "Слово добавлено в общий словарь";
+}
+
+document
+  .getElementById("commonDictionaryBtn")
+  .addEventListener("click", saveWordToCommonDictionary);
+
 /* ---------- annotation ---------- */
 
 function addAnnotation(){
@@ -2115,14 +2305,17 @@ editor.addEventListener("input", () => {
 
 loadLearningMemory();
 loadMemoryHandle();
+loadCustomDictionaryLocal();
 updateWordCount();
 loadLocalDictionary().then(() => {
   injectLearningWordsIntoDictionary();
+  updateDictionaryStatusText();
   updateWordCount();
   refreshMissingWordMarks();
   updateWordCount();
 });
 syncMemoryFromGithub();
+syncCustomDictionaryFromGithub();
 </script>
 </body>
 </html>
